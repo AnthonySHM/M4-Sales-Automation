@@ -56,12 +56,13 @@ Run tests at all applicable tiers:
 
 **Never run E2E tests against the production Shared Drive or with real customer data (SB-05).**
 
-### Step 4 — Verify each acceptance criterion explicitly
+### Step 4 — Verify each acceptance criterion explicitly and tick checkboxes
 
 For every criterion in the issue:
 1. Run the exact command or test that produces observable evidence.
 2. Capture the stdout / stderr / exit code.
 3. Mark the criterion `PASS` or `FAIL` with the captured evidence inline.
+4. **Tick the checkbox in the issue body** for each criterion that passes. Use `gh issue edit` to update the issue body, replacing `- [ ] <criterion text>` with `- [x] <criterion text>` for every passing criterion. Leave failing criteria as `- [ ]`. Fetch the current body first with `gh issue view --json body`, apply the replacements in memory, then push the full updated body with `gh issue edit <number> --body "<updated body>"`.
 
 Pay special attention to:
 - **G-04 (formatting fidelity):** inspect the Docs API representation of retained blocks. Do not rely on visual inspection alone.
@@ -111,10 +112,12 @@ Then include:
 ## Post-Verdict Actions
 
 ### On `QA: PASS`
+- Ensure all passing acceptance criterion checkboxes are ticked in the issue body (Step 4 above).
 - Post the comment to the open GitHub Issue.
 - Do not close the issue — the **Orchestrator** closes it.
 
 ### On `QA: FAIL`
+- Tick checkboxes for any criteria that did pass; leave failing criteria unchecked (Step 4 above).
 - Post the comment with full diagnostic detail.
 - The Orchestrator routes the issue back to the SWE subagent.
 - If this is the third consecutive `QA: FAIL` on the same issue, note it explicitly. The Orchestrator will label it `needs-human`.

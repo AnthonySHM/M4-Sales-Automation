@@ -52,7 +52,7 @@ Every decision carries an **origin** tag so downstream agents know how hard to p
 | U-07 | Concern that teammates would be "using my email" for Drive access | Access must not depend on one person's personal identity |
 | U-08 | Prefers not to build a standalone Python application; accepts Python scripts living inside a Claude skill | Packaging: scripts bundled in a skill, invoked by Claude Code |
 | U-09 | Will build in a local folder with Claude Code; team shares it | Local Claude Code project, distributed through a shared repository |
-| U-10 | The developer/maintainer uses **Claude Pro** (individual plan) to run Claude Code locally. Job runners (teammates who submit and review assembly jobs) need only Python and a Google service-account credential — no Claude subscription required. No Team plan is needed. | CORRECTED — earlier assumption that a Team plan was required was invalidated by Q-08 resolution (Issue #4, CORR-04). Only the person operating Claude Code needs a Claude subscription. |
+| U-10 | Is on (or evaluating) the Claude **Team plan** | Team plan is the collaboration and seat layer |
 | U-11 | Wants a step-by-step workflow for "automating one contract" first | MVP is a **single document family, single-job** pilot before scaling |
 
 **Brief signals (from the commissioning prompt):**
@@ -72,7 +72,7 @@ Every decision carries an **origin** tag so downstream agents know how hard to p
 | "decoupled" | Judgment (Claude), deterministic document operations (scripts), state (ledger), content (Drive) and review (humans) are separate components with file/API contracts between them | **In scope** |
 | "multi-tenant" | Tenant = **Workspace** (one organisation or team: its Drive area, repo, credentials and recipes) | **Single workspace in MVP.** All records carry `workspace_id` so a second workspace needs no schema change |
 | "real-time event distribution" | Job status changes become visible to the team as they happen | **Near-real-time**: append-only event log in a shared ledger the team can watch. Push notifications deferred |
-| "user access controls" | Who can run jobs, edit the library and recipes, approve output, and hold the service credential | **In scope**, using Drive sharing roles, repo access, and a service-account credential |
+| "user access controls" | Who can run jobs, edit the library and recipes, approve output, and hold the service credential | **In scope**, using Drive sharing roles, repo access, Team plan membership and a service identity |
 | "persistent state tracking" | Every assembly job and its transitions are durably recorded | **In scope** (shared job ledger plus Drive revision history) |
 | "automated task dispatching" | Once a job is requested, its steps run without manual intervention up to the review gate | **In scope within a job.** A queue that dispatches jobs without a person triggering them is deferred |
 
@@ -109,7 +109,7 @@ Every decision carries an **origin** tag so downstream agents know how hard to p
 | CORR-01 | "Claude Code can record what worked and commit it as a skill automatically" for the document-editing workflow | That automatic recording applies to specific bundled skills for running and verifying apps. A document-assembly skill has to be **authored**, though the skill-creator skill and Claude Code can draft it | CORRECTED |
 | CORR-02 | "The Google Docs API preserves formatting well… insert this table here, this clause there" | Precise edits and deletions inside one document are reliable. **Copying a formatted section from one Google Doc into another** has no single API operation: text, paragraph styles, lists and tables must be rebuilt element by element, which is error-prone for complex contracts. That's why AD-03 makes assembly subtractive | CORRECTED |
 | CORR-03 | "Three Python scripts" are needed | That number was illustrative. Script count follows the job's functions, not a per-skill rule. §6.2 defines the MVP script set | CORRECTED |
-| CORR-04 | Team plan pricing and minimums quoted in conversation (Standard ≈ $25/seat monthly or $20 annual; Premium ≈ $125/$100; minimum of 2 seats) | Claude Code is only required for the developer/maintainer (individual Claude Pro is sufficient). Job runners need only Python and a Google service-account credential — no Team plan required. References: Q-08 resolution, Issue #4. | CORRECTED |
+| CORR-04 | Team plan pricing and minimums quoted in conversation (Standard ≈ $25/seat monthly or $20 annual; Premium ≈ $125/$100; minimum of 2 seats) | Claude Code is only required for the developer/maintainer (individual Claude Pro is sufficient). Job runners only need Python + Google service account credentials — no Claude subscription required. No Team plan needed. | CORRECTED |
 | CORR-05 | "The person who created the Google Drive space creates the service account" | Two separate roles. Someone with Google Cloud Console access creates the service account. The **owner or manager of the Drive location** grants it access. They may or may not be the same person | CORRECTED |
 
 ### 1.6 Open questions
@@ -123,7 +123,7 @@ Every decision carries an **origin** tag so downstream agents know how hard to p
 | Q-05 | Does the organisation use Google Workspace with Shared Drives available? Who administers it? | AD-08, R-01 |
 | Q-06 | Who are the authorised Reviewers, and does approval need to be recorded with a specific identity or signature? | AD-10, G-07 |
 | Q-07 | Do blocks ever appear in headers, footers or footnotes, or only in the document body? | TL-03 |
-| Q-08 | Do Team plan seats for all users include Claude Code, or are Premium seats required? | U-10, CORR-04 |
+| Q-08 | ~~Do Team plan seats for all users include Claude Code, or are Premium seats required?~~ **RESOLVED:** Claude Code is only needed by the developer. Job runners need only Python + Google credentials. No Team plan required. | U-10, CORR-04 |
 | Q-09 | Is Google Docs the required output format, or is a Word or PDF export also needed at approval time? | §6.5 |
 
 ---
@@ -374,7 +374,7 @@ failed or rejected → (retry) creates a NEW job with a new request_id that refe
 | SB-04 | **Minimal API scopes** | Request only the Docs and Drive scopes the scripts require. Downstream design must document each scope with its justification (VERIFY: whether a narrower Drive scope works for files the service account didn't create) |
 | SB-05 | **Separation of duties** | Changes to masters (R-03) and to recipes or code (R-04) go through review: a Drive approval step for masters, pull-request review for the repo. Optional setting: the requester can't be the reviewer of their own job |
 | SB-06 | **Data minimisation** | The ledger stores IDs, option values and statuses, not contract bodies. Customer-identifying placeholder values are stored only if NF-07 policy allows; otherwise store a hash or reference |
-| SB-07 | **AI data handling** | NOT APPLICABLE. Assembly job execution uses Google Drive and Docs APIs only (copy, delete ranges, replace text, move files). Contract content is never passed through Claude or any AI model during a job run. Claude is used only by the developer/operator when writing or debugging scripts and skills in their local Claude Code session — at which point no real customer contract content should be used. No AI data-handling terms apply to the automated pipeline. |
+| SB-07 | **AI data handling** | Contract content processed by Claude falls under the organisation's Claude Team plan data terms and internal policy. Confirm acceptability with the Workspace Owner before processing real customer data |
 | SB-08 | **No external transmission** | The engine never emails, shares externally, or changes the sharing settings of output documents. Sharing outside the organisation is a manual human act after approval |
 | SB-09 | **Audit** | Credential issue and rotation, role changes, master approvals and recipe publications produce AuditRecords |
 

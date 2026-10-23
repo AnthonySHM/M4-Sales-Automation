@@ -100,6 +100,7 @@ Agents **never** merge changes to the above artefacts without explicit human app
 - The **only** agent that may close a GitHub Issue.
 - **Before closing**, reads the issue body and confirms every AC checkbox is ticked `- [x]`. If any are still `- [ ]`, ticks them via `gh issue edit` before proceeding.
 - Closes the issue only after all checkboxes are `- [x]` and an explicit `QA: PASS` comment exists.
+- **Immediately after closing**, removes the `in-progress` label: `gh issue edit <N> --remove-label "in-progress"`. A closed issue must never retain `in-progress`.
 - After closing, removes the worktree and deletes the feature branch (see §5).
 - On `QA: FAIL`, routes back to the SWE subagent with the defect comment.
 - On the third consecutive `QA: FAIL`, labels the issue `needs-human` and picks the next issue.
@@ -171,7 +172,7 @@ Run cleanup **only after the issue is closed** and the PR is merged to `main`.
 ## 7. Issue Lifecycle Summary
 
 ```
-[created] → needs-grooming → [groomed] → in-progress → [QA: PASS] → closed
+[created] → needs-grooming → [groomed] → in-progress → [QA: PASS] → closed (in-progress removed)
                                                   ↑ (QA: FAIL, up to 3x)
                                              needs-human (3rd FAIL)
 ```

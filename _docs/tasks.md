@@ -203,3 +203,13 @@
 **Description:** Implement `review.py` with `--job-id` and `--decision approved|rejected [--reason "..."]`. Moves the Drive file, appends a `ReviewDecision` record, and updates job status to `approved` or `rejected`. Validates that the caller is an R-06 identity (VERIFY: how identity is confirmed in the CLI context). Advances G-07, AD-10.
 
 **Dependencies:** Task #15, Task #12
+
+---
+
+## 21. [HUMAN] P0 — Correct scope plan assumptions invalidated by Q-08 resolution
+
+**Goal:** Update `_docs/MVP_scope_plan.md` to correct three stale assumptions now that Q-08 is resolved: U-10 (Team plan assumption), SB-07 (Claude data terms), and the access controls description. Advances G-11, G-12.
+
+**Description:** Issue #4 confirmed no Claude Team plan is needed — only the developer requires Claude Pro; job runners use Python + Google credentials only. Three scope plan items must be corrected: (1) U-10 still references the Team plan as a requirement; (2) SB-07 assumes contract content is processed by Claude, which may not be true; (3) the access controls section lists Team plan membership as an access layer, which no longer applies.
+
+**Dependencies:** Task #4
