@@ -26,8 +26,14 @@ class UnimplementedError(Exception):
     pass
 
 
+class _Parser(argparse.ArgumentParser):
+    def error(self, message):
+        print(json.dumps({"error": {"code": "missing_argument", "message": message}}))
+        sys.exit(1)
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Scan master template for marker issues")
+    parser = _Parser(description="Scan master template for marker issues")
     parser.add_argument("--file-id", required=True, help="Google Doc file ID to scan")
     parser.add_argument(
         "--registry",

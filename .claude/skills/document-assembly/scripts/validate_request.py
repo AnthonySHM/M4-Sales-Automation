@@ -15,8 +15,14 @@ import sys
 # Full implementation in Issue #11. This stub validates CLI contract only.
 
 
+class _Parser(argparse.ArgumentParser):
+    def error(self, message):
+        print(json.dumps({"error": {"code": "missing_argument", "message": message}}))
+        sys.exit(1)
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Validate an assembly request")
+    parser = _Parser(description="Validate an assembly request")
     parser.add_argument("--request", required=True, help="Path to request JSON file")
     parser.add_argument("--recipe", required=True, help="Path to recipe JSON file")
     args = parser.parse_args(argv)

@@ -18,8 +18,14 @@ import sys
 # Full implementation across Issues #13, #14, #15. Stub validates CLI contract.
 
 
+class _Parser(argparse.ArgumentParser):
+    def error(self, message):
+        print(json.dumps({"error": {"code": "missing_argument", "message": message}}))
+        sys.exit(1)
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="Assemble a document from a request")
+    parser = _Parser(description="Assemble a document from a request")
     parser.add_argument("--request", required=True, help="Path to request JSON file")
     parser.add_argument(
         "--dry-run",
