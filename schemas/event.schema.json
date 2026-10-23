@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/event.schema.json",
+  "title": "Event",
+  "description": "Append-only event record written to the ledger 'events' tab on every job state transition. (scope plan §6.4, G-13, AD-12, AD-13)",
+  "type": "object",
+  "required": [
+    "event_id",
+    "job_id",
+    "workspace_id",
+    "event_type",
+    "occurred_at",
+    "actor",
+    "detail"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "event_id": {
+      "type": "string",
+      "description": "Unique event identifier (e.g. 'evt_…')."
+    },
+    "job_id": {
+      "type": "string",
+      "description": "Reference to the AssemblyJob that produced this event."
+    },
+    "workspace_id": {
+      "type": "string",
+      "description": "Immutable workspace identifier. Required on every workspace-owned record (AD-13)."
+    },
+    "event_type": {
+      "type": "string",
+      "description": "Dot-separated event type in the form '<entity>.<to_status>' (e.g. 'job.awaiting_review')."
+    },
+    "occurred_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$",
+      "description": "ISO 8601 / RFC 3339 timestamp when this transition occurred. (scope plan §6.4)"
+    },
+    "actor": {
+      "type": "string",
+      "description": "Identity that caused the transition: 'service' for the executor, or a member ID for human actions."
+    },
+    "detail": {
+      "type": "object",
+      "description": "Arbitrary structured detail about the event (e.g. output_document_id, block count). Must not contain PII or document content (SB-06)."
+    }
+  }
+}

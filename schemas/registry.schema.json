@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/registry.schema.json",
+  "title": "BlockRegistry",
+  "description": "Machine-readable list of every ContentBlock in a document family. block_id pattern ^[a-z0-9_]{3,64}$ is the canonical identifier used in master template markers. (scope plan §4.2 ContentBlock, NF-04)",
+  "type": "object",
+  "required": ["family_key", "blocks"],
+  "additionalProperties": false,
+  "properties": {
+    "family_key": {
+      "type": "string",
+      "description": "Document family this registry belongs to."
+    },
+    "blocks": {
+      "type": "array",
+      "description": "All ContentBlock entries for this family.",
+      "items": {
+        "type": "object",
+        "required": ["block_id", "label", "kind", "optional", "status"],
+        "additionalProperties": false,
+        "properties": {
+          "block_id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{3,64}$",
+            "description": "Unique within family; appears verbatim in [[BLOCK:block_id]] markers in the master."
+          },
+          "label": {
+            "type": "string",
+            "description": "Human-readable description of this block."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["section", "clause", "table", "annex"],
+            "description": "Structural kind of the block. (scope plan §4.2 ContentBlock.kind)"
+          },
+          "optional": {
+            "type": "boolean",
+            "description": "false = always retained in the output regardless of recipe rules."
+          },
+          "status": {
+            "type": "string",
+            "enum": ["proposed", "active", "deprecated", "removed"],
+            "description": "Lifecycle state. A block cannot be 'removed' while any published recipe references it. (scope plan §4.3 ContentBlock lifecycle)"
+          },
+          "source_ref": {
+            "type": "string",
+            "description": "Optional: which legacy SourceTemplate this block was decomposed from (provenance, AD-05)."
+          },
+          "owner": {
+            "type": "string",
+            "description": "Optional: member ID of the Content Curator accountable for this block (R-03)."
+          }
+        }
+      }
+    }
+  }
+}
