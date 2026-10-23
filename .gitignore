@@ -1,0 +1,27 @@
+# Credentials — never commit (SB-02)
+credentials/
+*.key.json
+*-service-account*.json
+*-credentials*.json
+.env
+*.pem
+*.p12
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Git worktrees (parallel agent execution)
+.worktrees/
+
+# OS / editor artefacts
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
