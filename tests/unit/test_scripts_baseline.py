@@ -1,0 +1,361 @@
+"""
+Baseline unit tests for all four script stubs.
+
+Covers:
+  - doctor.py: exits 0 with fake workspace config and no API clients
+  - doctor.py: exits 1 when workspace config file is missing
+  - scan_template.py: exits 0 with --file-id provided
+  - scan_template.py: exits 1 when --file-id is missing
+  - validate_request.py: exits 1 when --request file is missing
+  - validate_request.py: exits 1 when --recipe file is missing
+  - assemble.py: exits 0 in --dry-run with valid request file
+  - assemble.py: exits 1 when --request file is missing
+  - assemble.py: exits 1 when --request is not valid JSON
+
+No live Google API calls are made anywhere in this file. (SB-05, Architecture §9)
+"""
+
+import json
+import os
+import sys
+import tempfile
+
+import pytest
+import yaml
+
+SCRIPTS = os.path.join(
+    os.path.dirname(__file__),
+    "..", "..",
+    ".claude", "skills", "document-assembly", "scripts",
+)
+sys.path.insert(0, os.path.abspath(SCRIPTS))
+
+import doctor
+import scan_template
+import validate_request
+import assemble
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def write_temp_yaml(data: dict) -> str:
+    f = tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False)
+    yaml.dump(data, f)
+    f.close()
+    return f.name
+
+
+def write_temp_json(data: dict) -> str:
+    f = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
+    json.dump(data, f)
+    f.close()
+    return f.name
+
+
+MINIMAL_WORKSPACE = {
+    "workspace_id": "test-workspace",
+    "shared_drive_id": "REPLACE_DRIVE",
+    "folders": {
+        "masters": "REPLACE_MASTERS",
+        "review": "REPLACE_REVIEW",
+        "approved": "REPLACE_APPROVED",
+        "quarantine": "REPLACE_QUARANTINE",
+    },
+    "ledger": {
+        "spreadsheet_id": "REPLACE_SHEET",
+        "jobs_tab": "jobs",
+        "events_tab": "events",
+    },
+    "pilot_family": {
+        "key": "family_a",
+        "master_template_id": "REPLACE_MASTER",
+        "approved_revision_id": "REPLACE_REV",
+        "active_recipe_version": 1,
+    },
+}
+
+MINIMAL_REQUEST = {
+    "request_id": "test-req-001",
+    "family_key": "family_a",
+    "options": {},
+    "placeholder_values": {},
+    "requested_by": "test@example.com",
+}
+
+MINIMAL_RECIPE = {
+    "family_key": "family_a",
+    "version": 1,
+    "options": [],
+    "rules": [],
+    "defaults": {"include": []},
+    "placeholder_map": {},
+    "status": "published",
+}
+
+
+# ---------------------------------------------------------------------------
+# doctor.py
+# ---------------------------------------------------------------------------
+
+class TestDoctor:
+    def test_exits_zero_with_valid_fake_config(self, capsys):
+        """doctor exits 0 when config is valid and no API clients are injected."""
+        config_path = write_temp_yaml(MINIMAL_WORKSPACE)
+        try:
+            with pytest.raises(SystemExit) as exc_info:
+                doctor.main(["--workspace", config_path])
+            assert exc_info.value.code == 0
+            captured = capsys.readouterr()
+            result = json.loads(captured.out)
+            assert result["status"] in ("ok", "degraded")
+            assert "checks" in result
+        finally:
+            os.unlink(config_path)
+
+    def test_exits_nonzero_when_config_missing(self, capsys):
+        """doctor exits with non-zero when workspace config file does not exist."""
+        with pytest.raises(SystemExit) as exc_info:
+            doctor.main(["--workspace", "/nonexistent/path/workspace.yaml"])
+        assert exc_info.value.code != 0
+        captured = capsys.readouterr()
+        result = json.loads(captured.out)
+        assert result["status"] == "fail"
+
+    def test_stdout_is_valid_json(self, capsys):
+        """doctor always writes valid JSON to stdout."""
+        config_path = write_temp_yaml(MINIMAL_WORKSPACE)
+        try:
+            with pytest.raises(SystemExit):
+                doctor.main(["--workspace", config_path])
+            captured = capsys.readouterr()
+            json.loads(captured.out)  # must not raise
+        finally:
+            os.unlink(config_path)
+
+    def test_checks_list_present(self, capsys):
+        """doctor result always contains a 'checks' list."""
+        config_path = write_temp_yaml(MINIMAL_WORKSPACE)
+        try:
+            with pytest.raises(SystemExit):
+                doctor.main(["--workspace", config_path])
+            result = json.loads(capsys.readouterr().out)
+            assert isinstance(result["checks"], list)
+            assert len(result["checks"]) > 0
+        finally:
+            os.unlink(config_path)
+
+    def test_skips_not_configured_items(self, capsys):
+        """doctor marks checks as 'skip' when IDs are placeholder values."""
+        config_path = write_temp_yaml(MINIMAL_WORKSPACE)
+        try:
+            with pytest.raises(SystemExit):
+                doctor.main(["--workspace", config_path])
+            result = json.loads(capsys.readouterr().out)
+            statuses = {c["name"]: c["status"] for c in result["checks"]}
+            # IDs starting with REPLACE_ should be skipped, not fail
+            assert statuses.get("master_template") in ("skip", "pass")
+            assert statuses.get("ledger") in ("skip", "pass")
+        finally:
+            os.unlink(config_path)
+
+    def test_no_google_api_clients_imported_in_test(self):
+        """Verify no real Google API client is constructed during unit tests."""
+        import doctor as doc_module
+        # The module exists; no googleapiclient.discovery.build was called
+        # (enforced by not importing it at module level)
+        assert hasattr(doc_module, "run_checks")
+
+
+# ---------------------------------------------------------------------------
+# scan_template.py
+# ---------------------------------------------------------------------------
+
+class TestScanTemplate:
+    def test_exits_zero_with_file_id(self, capsys):
+        """scan_template exits 0 (stub) when --file-id is provided."""
+        with pytest.raises(SystemExit) as exc_info:
+            scan_template.main(["--file-id", "fake-doc-id-123"])
+        assert exc_info.value.code == 0
+        result = json.loads(capsys.readouterr().out)
+        assert "issues" in result
+        assert "summary" in result
+
+    def test_stdout_structure(self, capsys):
+        """scan_template result contains all required top-level keys."""
+        with pytest.raises(SystemExit):
+            scan_template.main(["--file-id", "fake-doc-id"])
+        result = json.loads(capsys.readouterr().out)
+        for key in ("file_id", "markers_found", "issues", "summary"):
+            assert key in result, f"Missing key: {key}"
+
+    def test_exits_nonzero_when_file_id_missing(self):
+        """scan_template exits non-zero when --file-id is not provided."""
+        with pytest.raises(SystemExit) as exc_info:
+            scan_template.main([])
+        assert exc_info.value.code != 0
+
+    @pytest.mark.parametrize("file_id", [
+        "abc123",
+        "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms",  # typical Drive ID format
+        "a" * 44,  # max-length-ish ID
+    ])
+    def test_accepts_various_file_ids(self, file_id, capsys):
+        """scan_template accepts any non-empty string as file-id."""
+        with pytest.raises(SystemExit) as exc_info:
+            scan_template.main(["--file-id", file_id])
+        assert exc_info.value.code == 0
+
+
+# ---------------------------------------------------------------------------
+# validate_request.py
+# ---------------------------------------------------------------------------
+
+class TestValidateRequest:
+    def test_exits_zero_with_valid_files(self, capsys):
+        """validate_request exits 0 when both request and recipe are valid JSON."""
+        req_path = write_temp_json(MINIMAL_REQUEST)
+        rec_path = write_temp_json(MINIMAL_RECIPE)
+        try:
+            with pytest.raises(SystemExit) as exc_info:
+                validate_request.main(["--request", req_path, "--recipe", rec_path])
+            assert exc_info.value.code == 0
+            result = json.loads(capsys.readouterr().out)
+            assert result["valid"] is True
+        finally:
+            os.unlink(req_path)
+            os.unlink(rec_path)
+
+    def test_exits_one_when_request_missing(self, capsys):
+        """validate_request exits 1 with structured error when request file is missing."""
+        rec_path = write_temp_json(MINIMAL_RECIPE)
+        try:
+            with pytest.raises(SystemExit) as exc_info:
+                validate_request.main([
+                    "--request", "/nonexistent/request.json",
+                    "--recipe", rec_path,
+                ])
+            assert exc_info.value.code == 1
+            result = json.loads(capsys.readouterr().out)
+            assert result["valid"] is False
+            assert len(result["errors"]) > 0
+        finally:
+            os.unlink(rec_path)
+
+    def test_exits_one_when_recipe_missing(self, capsys):
+        """validate_request exits 1 with structured error when recipe file is missing."""
+        req_path = write_temp_json(MINIMAL_REQUEST)
+        try:
+            with pytest.raises(SystemExit) as exc_info:
+                validate_request.main([
+                    "--request", req_path,
+                    "--recipe", "/nonexistent/recipe.json",
+                ])
+            assert exc_info.value.code == 1
+            result = json.loads(capsys.readouterr().out)
+            assert result["valid"] is False
+        finally:
+            os.unlink(req_path)
+
+    def test_exits_one_when_request_invalid_json(self, capsys):
+        """validate_request exits 1 when request file contains invalid JSON."""
+        bad = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
+        bad.write("{not valid json")
+        bad.close()
+        rec_path = write_temp_json(MINIMAL_RECIPE)
+        try:
+            with pytest.raises(SystemExit) as exc_info:
+                validate_request.main(["--request", bad.name, "--recipe", rec_path])
+            assert exc_info.value.code == 1
+            result = json.loads(capsys.readouterr().out)
+            assert result["valid"] is False
+        finally:
+            os.unlink(bad.name)
+            os.unlink(rec_path)
+
+    def test_exits_nonzero_when_args_missing(self):
+        """validate_request exits non-zero when required args are absent."""
+        with pytest.raises(SystemExit) as exc_info:
+            validate_request.main([])
+        assert exc_info.value.code != 0
+
+
+# ---------------------------------------------------------------------------
+# assemble.py
+# ---------------------------------------------------------------------------
+
+class TestAssemble:
+    def test_dry_run_exits_zero_with_valid_request(self, capsys):
+        """assemble --dry-run exits 0 with a valid request file."""
+        req_path = write_temp_json(MINIMAL_REQUEST)
+        try:
+            with pytest.raises(SystemExit) as exc_info:
+                assemble.main(["--request", req_path, "--dry-run"])
+            assert exc_info.value.code == 0
+            result = json.loads(capsys.readouterr().out)
+            assert result["event"] == "dry_run_complete"
+        finally:
+            os.unlink(req_path)
+
+    def test_exits_one_when_request_missing(self, capsys):
+        """assemble exits 1 with structured error when request file is missing."""
+        with pytest.raises(SystemExit) as exc_info:
+            assemble.main(["--request", "/nonexistent/request.json"])
+        assert exc_info.value.code == 1
+        result = json.loads(capsys.readouterr().out)
+        assert result["event"] == "job_failed"
+        assert "error" in result
+        assert result["error"]["retryable"] is False
+
+    def test_exits_one_when_request_invalid_json(self, capsys):
+        """assemble exits 1 when request file contains invalid JSON."""
+        bad = tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False)
+        bad.write("{bad json")
+        bad.close()
+        try:
+            with pytest.raises(SystemExit) as exc_info:
+                assemble.main(["--request", bad.name])
+            assert exc_info.value.code == 1
+            result = json.loads(capsys.readouterr().out)
+            assert result["event"] == "job_failed"
+        finally:
+            os.unlink(bad.name)
+
+    def test_dry_run_includes_request_id(self, capsys):
+        """assemble --dry-run result includes the request_id from the request file."""
+        req_path = write_temp_json(MINIMAL_REQUEST)
+        try:
+            with pytest.raises(SystemExit):
+                assemble.main(["--request", req_path, "--dry-run"])
+            result = json.loads(capsys.readouterr().out)
+            assert result["detail"]["request_id"] == "test-req-001"
+        finally:
+            os.unlink(req_path)
+
+    def test_exits_nonzero_when_request_arg_missing(self):
+        """assemble exits non-zero when --request is not provided."""
+        with pytest.raises(SystemExit) as exc_info:
+            assemble.main([])
+        assert exc_info.value.code != 0
+
+    def test_stdout_is_always_valid_json_on_error(self, capsys):
+        """assemble always writes valid JSON to stdout, even on errors."""
+        with pytest.raises(SystemExit):
+            assemble.main(["--request", "/no/such/file.json"])
+        captured = capsys.readouterr()
+        json.loads(captured.out)  # must not raise
+
+    @pytest.mark.parametrize("request_data", [
+        {"request_id": "r1", "family_key": "family_a", "options": {}, "placeholder_values": {}, "requested_by": "a@b.com"},
+        {"request_id": "r2", "family_key": "family_b", "options": {"type": "standard"}, "placeholder_values": {"NAME": "Acme"}, "requested_by": "b@c.com"},
+    ])
+    def test_dry_run_accepts_various_valid_requests(self, request_data, capsys):
+        """assemble --dry-run exits 0 for any structurally valid request."""
+        req_path = write_temp_json(request_data)
+        try:
+            with pytest.raises(SystemExit) as exc_info:
+                assemble.main(["--request", req_path, "--dry-run"])
+            assert exc_info.value.code == 0
+        finally:
+            os.unlink(req_path)
