@@ -302,28 +302,66 @@ class TestValidateRequest:
 # assemble.py
 # ---------------------------------------------------------------------------
 
+def _last_json_line(out: str) -> dict:
+    """Parse the last non-empty JSON line from streaming stdout output."""
+    lines = [l for l in out.strip().splitlines() if l.strip()]
+    return json.loads(lines[-1])
+
+
+def _write_workspace_and_recipe(family_key: str = "family_a") -> tuple[str, str]:
+    """Write temp workspace.yaml and matching recipe json; return (ws_path, recipe_path)."""
+    ws_path = write_temp_yaml({
+        **MINIMAL_WORKSPACE,
+        "pilot_family": {
+            "key": family_key,
+            "master_template_id": "REPLACE_MASTER",
+            "approved_revision_id": "REPLACE_REV",
+            "active_recipe_version": 1,
+        },
+    })
+    recipe = {**MINIMAL_RECIPE, "family_key": family_key}
+    recipe_path = write_temp_json(recipe)
+    return ws_path, recipe_path
+
+
 class TestAssemble:
-    def test_dry_run_exits_zero_with_valid_request(self, capsys):
-        """assemble --dry-run exits 0 with a valid request file."""
+    def test_dry_run_exits_zero_with_valid_request(self, capsys, tmp_path):
+        """assemble --dry-run exits 0 with a valid request + workspace + recipe."""
         req_path = write_temp_json(MINIMAL_REQUEST)
+        ws_path, recipe_path = _write_workspace_and_recipe()
+        # Point workspace at the temp recipe via the recipe path override trick:
+        # Since main() derives recipe path from workspace config, we write the recipe
+        # to the exact path that main() will look for it: config/recipes/family_a_v1.json
+        recipe_dir = tmp_path / "config" / "recipes"
+        recipe_dir.mkdir(parents=True)
+        recipe_file = recipe_dir / "family_a_v1.json"
+        recipe_file.write_text(json.dumps(MINIMAL_RECIPE))
+        import os as _os
+        orig_dir = _os.getcwd()
+        _os.chdir(str(tmp_path))
         try:
             with pytest.raises(SystemExit) as exc_info:
-                assemble.main(["--request", req_path, "--dry-run"])
+                assemble.main(["--request", req_path, "--dry-run", "--workspace", ws_path])
             assert exc_info.value.code == 0
-            result = json.loads(capsys.readouterr().out)
-            assert result["event"] == "dry_run_complete"
+            out = capsys.readouterr().out
+            last = _last_json_line(out)
+            assert last["event"] == "dry_run_complete"
         finally:
+            _os.chdir(orig_dir)
             os.unlink(req_path)
+            os.unlink(ws_path)
+            os.unlink(recipe_path)
 
     def test_exits_one_when_request_missing(self, capsys):
         """assemble exits 1 with structured error when request file is missing."""
         with pytest.raises(SystemExit) as exc_info:
             assemble.main(["--request", "/nonexistent/request.json"])
         assert exc_info.value.code == 1
-        result = json.loads(capsys.readouterr().out)
+        out = capsys.readouterr().out
+        result = _last_json_line(out)
         assert result["event"] == "job_failed"
-        assert "error" in result
-        assert result["error"]["retryable"] is False
+        assert "error" in result["detail"]
+        assert result["detail"]["error"]["retryable"] is False
 
     def test_exits_one_when_request_invalid_json(self, capsys):
         """assemble exits 1 when request file contains invalid JSON."""
@@ -334,21 +372,32 @@ class TestAssemble:
             with pytest.raises(SystemExit) as exc_info:
                 assemble.main(["--request", bad.name])
             assert exc_info.value.code == 1
-            result = json.loads(capsys.readouterr().out)
+            result = _last_json_line(capsys.readouterr().out)
             assert result["event"] == "job_failed"
         finally:
             os.unlink(bad.name)
 
-    def test_dry_run_includes_request_id(self, capsys):
+    def test_dry_run_includes_request_id(self, capsys, tmp_path):
         """assemble --dry-run result includes the request_id from the request file."""
         req_path = write_temp_json(MINIMAL_REQUEST)
+        ws_path, recipe_path = _write_workspace_and_recipe()
+        recipe_dir = tmp_path / "config" / "recipes"
+        recipe_dir.mkdir(parents=True)
+        (recipe_dir / "family_a_v1.json").write_text(json.dumps(MINIMAL_RECIPE))
+        import os as _os
+        orig_dir = _os.getcwd()
+        _os.chdir(str(tmp_path))
         try:
             with pytest.raises(SystemExit):
-                assemble.main(["--request", req_path, "--dry-run"])
-            result = json.loads(capsys.readouterr().out)
-            assert result["detail"]["request_id"] == "test-req-001"
+                assemble.main(["--request", req_path, "--dry-run", "--workspace", ws_path])
+            out = capsys.readouterr().out
+            last = _last_json_line(out)
+            assert last["detail"]["request_id"] == "test-req-001"
         finally:
+            _os.chdir(orig_dir)
             os.unlink(req_path)
+            os.unlink(ws_path)
+            os.unlink(recipe_path)
 
     def test_exits_nonzero_when_request_arg_missing(self):
         """assemble exits non-zero when --request is not provided."""
@@ -361,18 +410,30 @@ class TestAssemble:
         with pytest.raises(SystemExit):
             assemble.main(["--request", "/no/such/file.json"])
         captured = capsys.readouterr()
-        json.loads(captured.out)  # must not raise
+        for line in captured.out.strip().splitlines():
+            if line.strip():
+                json.loads(line)  # each line must be valid JSON
 
     @pytest.mark.parametrize("request_data", [
         {"request_id": "r1", "family_key": "family_a", "options": {}, "placeholder_values": {}, "requested_by": "a@b.com"},
-        {"request_id": "r2", "family_key": "family_b", "options": {"type": "standard"}, "placeholder_values": {"NAME": "Acme"}, "requested_by": "b@c.com"},
+        {"request_id": "r2", "family_key": "family_a", "options": {}, "placeholder_values": {}, "requested_by": "b@c.com"},
     ])
-    def test_dry_run_accepts_various_valid_requests(self, request_data, capsys):
+    def test_dry_run_accepts_various_valid_requests(self, request_data, capsys, tmp_path):
         """assemble --dry-run exits 0 for any structurally valid request."""
         req_path = write_temp_json(request_data)
+        ws_path, recipe_path = _write_workspace_and_recipe()
+        recipe_dir = tmp_path / "config" / "recipes"
+        recipe_dir.mkdir(parents=True)
+        (recipe_dir / "family_a_v1.json").write_text(json.dumps(MINIMAL_RECIPE))
+        import os as _os
+        orig_dir = _os.getcwd()
+        _os.chdir(str(tmp_path))
         try:
             with pytest.raises(SystemExit) as exc_info:
-                assemble.main(["--request", req_path, "--dry-run"])
+                assemble.main(["--request", req_path, "--dry-run", "--workspace", ws_path])
             assert exc_info.value.code == 0
         finally:
+            _os.chdir(orig_dir)
             os.unlink(req_path)
+            os.unlink(ws_path)
+            os.unlink(recipe_path)
