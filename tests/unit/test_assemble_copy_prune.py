@@ -99,6 +99,59 @@ class FakeDocsClient:
         return self._documents
 
 
+class _FakeDocsDocumentsMulti:
+    """Returns different documents per call to support the full pipeline."""
+
+    def __init__(self, *documents: dict) -> None:
+        self._docs = list(documents)
+        self._call_idx = 0
+        self.batch_update_calls: list[dict] = []
+
+    def get(self, documentId):
+        mock = MagicMock()
+        idx = min(self._call_idx, len(self._docs) - 1)
+        mock.execute.return_value = dict(self._docs[idx])
+        self._call_idx += 1
+        return mock
+
+    def batchUpdate(self, documentId, body=None):
+        self.batch_update_calls.append({"documentId": documentId, "body": body})
+        mock = MagicMock()
+        mock.execute.return_value = {}
+        return mock
+
+
+class FakeDocsClientMulti:
+    """Fake Docs client returning different document states per get() call."""
+
+    def __init__(self, *documents: dict) -> None:
+        self._documents_obj = _FakeDocsDocumentsMulti(*documents)
+
+    def documents(self):
+        return self._documents_obj
+
+
+def _make_clean_document() -> dict:
+    """Document with no markers or placeholders."""
+    return {
+        "body": {
+            "content": [
+                {
+                    "paragraph": {
+                        "elements": [
+                            {
+                                "startIndex": 1,
+                                "endIndex": 20,
+                                "textRun": {"content": "Clean document text."},
+                            }
+                        ]
+                    }
+                }
+            ]
+        }
+    }
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -538,8 +591,12 @@ class TestAssemblePipeline:
             meta={"id": "master", "name": "Master", "headRevisionId": approved_rev},
             copy_result={"id": "output_doc_123"},
         )
-        doc = _make_document(*block_ids)
-        docs = FakeDocsClient(doc)
+        # Pipeline calls docs.get() multiple times:
+        #   prune_blocks, strip_markers, verify_output
+        # Supply a clean document for strip+verify calls so the pipeline exits 0.
+        doc_with_markers = _make_document(*block_ids)
+        clean_doc = _make_clean_document()
+        docs = FakeDocsClientMulti(doc_with_markers, clean_doc, clean_doc)
         return drive, docs
 
     def test_full_run_exits_0(self, capsys):
