@@ -100,19 +100,13 @@ MINIMAL_RECIPE = {
 # ---------------------------------------------------------------------------
 
 class TestDoctor:
-    def test_exits_zero_with_valid_fake_config(self, capsys):
-        """doctor exits 0 when config is valid and no API clients are injected."""
-        config_path = write_temp_yaml(MINIMAL_WORKSPACE)
-        try:
-            with pytest.raises(SystemExit) as exc_info:
-                doctor.main(["--workspace", config_path])
-            assert exc_info.value.code == 0
-            captured = capsys.readouterr()
-            result = json.loads(captured.out)
-            assert result["status"] in ("ok", "degraded")
-            assert "checks" in result
-        finally:
-            os.unlink(config_path)
+    def test_exits_zero_with_valid_fake_config(self):
+        """doctor returns 'ok' when config is valid and no API clients are injected."""
+        # Calls run_checks directly so the real-auth path in main() is not triggered.
+        # All IDs are REPLACE_ placeholders → all API checks skip → overall "ok".
+        result = doctor.run_checks(MINIMAL_WORKSPACE)
+        assert result["status"] in ("ok", "degraded")
+        assert "checks" in result
 
     def test_exits_nonzero_when_config_missing(self, capsys):
         """doctor exits with non-zero when workspace config file does not exist."""
@@ -146,19 +140,14 @@ class TestDoctor:
         finally:
             os.unlink(config_path)
 
-    def test_skips_not_configured_items(self, capsys):
+    def test_skips_not_configured_items(self):
         """doctor marks checks as 'skip' when IDs are placeholder values."""
-        config_path = write_temp_yaml(MINIMAL_WORKSPACE)
-        try:
-            with pytest.raises(SystemExit):
-                doctor.main(["--workspace", config_path])
-            result = json.loads(capsys.readouterr().out)
-            statuses = {c["name"]: c["status"] for c in result["checks"]}
-            # IDs starting with REPLACE_ should be skipped, not fail
-            assert statuses.get("master_template") in ("skip", "pass")
-            assert statuses.get("ledger") in ("skip", "pass")
-        finally:
-            os.unlink(config_path)
+        # Calls run_checks directly (unit-test mode: no clients injected).
+        result = doctor.run_checks(MINIMAL_WORKSPACE)
+        statuses = {c["name"]: c["status"] for c in result["checks"]}
+        # IDs starting with REPLACE_ should be skipped, not fail
+        assert statuses.get("master_template") in ("skip", "pass")
+        assert statuses.get("ledger") in ("skip", "pass")
 
     def test_no_google_api_clients_imported_in_test(self):
         """Verify no real Google API client is constructed during unit tests."""
