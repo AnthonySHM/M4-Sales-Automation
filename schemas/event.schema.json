@@ -6,12 +6,14 @@
   "type": "object",
   "required": [
     "event_id",
-    "job_id",
     "workspace_id",
+    "job_id",
+    "sequence",
     "event_type",
-    "occurred_at",
+    "from",
+    "to",
     "actor",
-    "detail"
+    "occurred_at"
   ],
   "additionalProperties": false,
   "properties": {
@@ -27,9 +29,24 @@
       "type": "string",
       "description": "Immutable workspace identifier. Required on every workspace-owned record (AD-13)."
     },
+    "sequence": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Position of this event in the job's event log. Monotonically increasing per job."
+    },
     "event_type": {
       "type": "string",
       "description": "Dot-separated event type in the form '<entity>.<to_status>' (e.g. 'job.awaiting_review')."
+    },
+    "from": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Prior job status before this transition."
+    },
+    "to": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Next job status after this transition."
     },
     "occurred_at": {
       "type": "string",
