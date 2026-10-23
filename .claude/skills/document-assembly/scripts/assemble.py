@@ -1,11 +1,9 @@
 """
 assemble.py — Core job runner for document assembly.
 
-Steps implemented in this issue (#13):
+Steps implemented:
   validate_request → resolve_blocks → copy_master → prune_blocks
-
-Steps stubbed for Issues #14–#15:
-  fill_placeholders → strip_markers → verify_output → submit_for_review
+  → fill_placeholders → strip_markers → verify_output → submit_for_review
 
 Exit codes:
   0 — job completed (or dry-run complete)
@@ -13,7 +11,8 @@ Exit codes:
   2 — external / transient error (retryable)
   3 — credential / permission error
 
-Advances AD-03, G-04, G-05, G-08, TL-01. Full implementation for Issue #13.
+Advances AD-03, G-04, G-05, G-07, G-08, G-09, G-10, G-13, TL-01, NF-06.
+Full implementation for Issues #13–#15.
 """
 
 from __future__ import annotations
@@ -22,6 +21,7 @@ import argparse
 import json
 import re
 import sys
+import time
 import uuid
 from datetime import datetime, timezone
 
@@ -85,6 +85,28 @@ def _emit(event: dict) -> None:
 
 def _now_iso() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+# ---------------------------------------------------------------------------
+# Retry helper (NF-06)
+# ---------------------------------------------------------------------------
+
+
+def _with_retry(fn, max_attempts: int = 5, base_delay: float = 1.0):
+    """Call fn() up to max_attempts times with exponential backoff (NF-06).
+
+    Retries only on GoogleApiError(retryable=True). Propagates immediately on
+    non-retryable errors or once max_attempts is exhausted.
+    """
+    for attempt in range(max_attempts):
+        try:
+            return fn()
+        except GoogleApiError as exc:
+            if not exc.retryable or attempt >= max_attempts - 1:
+                raise
+            delay = base_delay * (2 ** attempt)
+            time.sleep(delay)
+    raise RuntimeError("_with_retry: unreachable")  # pragma: no cover
 
 
 # ---------------------------------------------------------------------------
@@ -222,6 +244,28 @@ def copy_master(drive_client, workspace: dict) -> dict:
         "output_document_id": new_file["id"],
         "master_revision_id": live_rev,
     }
+
+
+# ---------------------------------------------------------------------------
+# Quarantine helper (G-10)
+# ---------------------------------------------------------------------------
+
+
+def _quarantine_document(drive_client, output_doc_id: str, workspace: dict) -> None:
+    """Move a partial output document from review/ to quarantine/ (G-10).
+
+    Uses Drive files.update with addParents / removeParents (best-effort; caller
+    swallows any exception so the original error is never obscured).
+    """
+    quarantine_folder: str = workspace["folders"]["quarantine"]
+    review_folder: str = workspace["folders"]["review"]
+    drive_client.files().update(
+        fileId=output_doc_id,
+        addParents=quarantine_folder,
+        removeParents=review_folder,
+        supportsAllDrives=True,
+        fields="id,parents",
+    ).execute()
 
 
 # ---------------------------------------------------------------------------
@@ -401,6 +445,35 @@ def verify_output(docs_client, output_doc_id: str) -> None:
     if leftover_placeholders:
         found = sorted(set(leftover_placeholders))
         raise MissingPlaceholderError(found)
+
+
+# ---------------------------------------------------------------------------
+# submit_for_review step (G-07, AD-10)
+# ---------------------------------------------------------------------------
+
+
+def submit_for_review(drive_client, output_doc_id: str, workspace: dict) -> dict:
+    """Verify the output document is accessible in the review folder.
+
+    The document was already placed in review/ by copy_master. This step
+    performs a lightweight files.get to confirm accessibility before handing
+    off to the human review gate (AD-10).
+
+    Returns dict with output_document_id and document_name.
+    """
+    meta = (
+        drive_client.files()
+        .get(
+            fileId=output_doc_id,
+            fields="id,name,parents",
+            supportsAllDrives=True,
+        )
+        .execute()
+    )
+    return {
+        "output_document_id": output_doc_id,
+        "document_name": meta.get("name", ""),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -610,6 +683,10 @@ def assemble(
                 },
             }
         )
+        try:
+            _quarantine_document(drive_client, output_doc_id, workspace)
+        except Exception:  # noqa: BLE001
+            pass
         if ledger and job_id:
             try:
                 ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
@@ -655,6 +732,10 @@ def assemble(
                 },
             }
         )
+        try:
+            _quarantine_document(drive_client, output_doc_id, workspace)
+        except Exception:  # noqa: BLE001
+            pass
         if ledger and job_id:
             try:
                 ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
@@ -672,6 +753,10 @@ def assemble(
                 },
             }
         )
+        try:
+            _quarantine_document(drive_client, output_doc_id, workspace)
+        except Exception:  # noqa: BLE001
+            pass
         if ledger and job_id:
             try:
                 ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
@@ -706,6 +791,10 @@ def assemble(
                 },
             }
         )
+        try:
+            _quarantine_document(drive_client, output_doc_id, workspace)
+        except Exception:  # noqa: BLE001
+            pass
         if ledger and job_id:
             try:
                 ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
@@ -744,6 +833,10 @@ def assemble(
                 },
             }
         )
+        try:
+            _quarantine_document(drive_client, output_doc_id, workspace)
+        except Exception:  # noqa: BLE001
+            pass
         if ledger and job_id:
             try:
                 ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
@@ -765,6 +858,10 @@ def assemble(
                 },
             }
         )
+        try:
+            _quarantine_document(drive_client, output_doc_id, workspace)
+        except Exception:  # noqa: BLE001
+            pass
         if ledger and job_id:
             try:
                 ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
@@ -782,6 +879,10 @@ def assemble(
                 },
             }
         )
+        try:
+            _quarantine_document(drive_client, output_doc_id, workspace)
+        except Exception:  # noqa: BLE001
+            pass
         if ledger and job_id:
             try:
                 ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
@@ -798,24 +899,61 @@ def assemble(
         }
     )
 
-    # Stub: submit_for_review (Issue #15)
+    # ------------------------------------------------------------------
+    # Step: submit_for_review
+    # ------------------------------------------------------------------
+    _emit({"event": "step_started", "step": "submit_for_review", "job_id": job_id, "detail": {}})
+
+    try:
+        review_result = submit_for_review(drive_client, output_doc_id, workspace)
+    except Exception as exc:  # noqa: BLE001
+        _emit(
+            {
+                "event": "job_failed",
+                "step": "submit_for_review",
+                "job_id": job_id,
+                "detail": {
+                    "error": {"code": "api_error", "message": str(exc), "retryable": True}
+                },
+            }
+        )
+        try:
+            _quarantine_document(drive_client, output_doc_id, workspace)
+        except Exception:  # noqa: BLE001
+            pass
+        if ledger and job_id:
+            try:
+                ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
+            except Exception:  # noqa: BLE001
+                pass
+        return 2
+
+    _emit(
+        {
+            "event": "step_succeeded",
+            "step": "submit_for_review",
+            "job_id": job_id,
+            "detail": review_result,
+        }
+    )
+
     _emit(
         {
             "event": "job_completed",
-            "step": "verify_output",
+            "step": "submit_for_review",
             "job_id": job_id,
             "detail": {
                 "output_document_id": output_doc_id,
+                "document_name": review_result.get("document_name", ""),
                 "resolved_blocks": resolved_blocks,
                 "pruned_blocks": pruned,
                 "replaced_keys": replaced_keys,
-                "note": "Stub — submit_for_review implemented in Issue #15",
             },
         }
     )
 
     if ledger and job_id:
-        ledger.update_job(job_id, {"status": "pending_review", "finished_at": _now_iso()})
+        ledger.update_job(job_id, {"status": "awaiting_review", "finished_at": _now_iso()})
 
     return 0
 
