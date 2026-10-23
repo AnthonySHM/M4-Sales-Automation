@@ -6,3 +6,7 @@ jsonschema==4.23.0
 PyYAML==6.0.2
 pytest==8.3.3
 pytest-mock==3.14.0
+# Dev / CI tooling
+detect-secrets==1.5.0   # Secret scanning in pre-commit and CI (SB-02)
+pre-commit==4.7.0       # Hook runner (code standards, SB-02)
+flake8==7.4.1           # Linting (code standards)
