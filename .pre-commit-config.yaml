@@ -1,0 +1,57 @@
+# Pre-commit hooks for M4 Sales Automation — Document Assembly skill.
+# Enforces: linting, secret scan, unit tests on every commit. (SB-02, code standards)
+#
+# Install once per machine:
+#   pip install pre-commit
+#   pre-commit install
+#
+# Run manually:
+#   pre-commit run --all-files
+
+repos:
+  # -------------------------------------------------------------------------
+  # Basic hygiene
+  # -------------------------------------------------------------------------
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=500"]
+
+  # -------------------------------------------------------------------------
+  # Secret scanning (SB-02)
+  # -------------------------------------------------------------------------
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline"]
+
+  # -------------------------------------------------------------------------
+  # Linting
+  # -------------------------------------------------------------------------
+  - repo: https://github.com/PyCQA/flake8
+    rev: 7.1.1
+    hooks:
+      - id: flake8
+        args:
+          - "--max-line-length=100"
+          - "--extend-ignore=E203,W503"
+        files: \.py$
+
+  # -------------------------------------------------------------------------
+  # Unit tests (no live API calls — SB-05)
+  # -------------------------------------------------------------------------
+  - repo: local
+    hooks:
+      - id: pytest-unit
+        name: pytest (unit tests only)
+        language: system
+        entry: python -m pytest tests/unit/ -q --tb=short
+        pass_filenames: false
+        always_run: true

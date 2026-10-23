@@ -1,5 +1,6 @@
 # Credentials — never commit (SB-02)
 credentials/
+credentials*.json
 *.key.json
 *-service-account*.json
 *-credentials*.json
