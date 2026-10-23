@@ -270,6 +270,140 @@ def prune_blocks(
 
 
 # ---------------------------------------------------------------------------
+# fill_placeholders step
+# ---------------------------------------------------------------------------
+
+PLACEHOLDER_RE = re.compile(r"\{\{[A-Z0-9_]+\}\}")
+
+
+def fill_placeholders(
+    docs_client, output_doc_id: str, placeholder_map: dict, placeholder_values: dict
+) -> list[str]:
+    """Replace all placeholder strings in the document.
+
+    Parameters
+    ----------
+    docs_client:
+        Injected Docs v1 resource.
+    output_doc_id:
+        ID of the copied (not master) document to mutate.
+    placeholder_map:
+        From recipe: {PLACEHOLDER_KEY: request_field_name}.
+    placeholder_values:
+        From request: {PLACEHOLDER_KEY: replacement_value}.
+
+    Returns list of replaced placeholder keys.
+
+    Raises MissingPlaceholderError if any key in placeholder_map is absent
+    from placeholder_values.
+
+    Security: replacement values are never written to stdout (SB-06).
+    """
+    missing = [k for k in placeholder_map if k not in placeholder_values]
+    if missing:
+        raise MissingPlaceholderError(sorted(missing))
+
+    if not placeholder_map:
+        return []
+
+    requests = []
+    replaced_keys = []
+    for ph_key in placeholder_map:
+        value = placeholder_values[ph_key]
+        requests.append(
+            {
+                "replaceAllText": {
+                    "containsText": {"text": "{{" + ph_key + "}}", "matchCase": True},
+                    "replaceText": value,
+                }
+            }
+        )
+        replaced_keys.append(ph_key)
+
+    docs_client.documents().batchUpdate(
+        documentId=output_doc_id,
+        body={"requests": requests},
+    ).execute()
+
+    return sorted(replaced_keys)
+
+
+# ---------------------------------------------------------------------------
+# strip_markers step
+# ---------------------------------------------------------------------------
+
+
+def strip_markers(docs_client, output_doc_id: str) -> list[str]:
+    """Remove any remaining {{BEGIN:*}} and {{END:*}} marker strings from the document.
+
+    Uses replaceAllText with an empty replacement string.
+    Returns list of unique marker patterns that were present (e.g. "{{BEGIN:foo}}").
+    """
+    document = docs_client.documents().get(documentId=output_doc_id).execute()
+    markers = _extract_all_markers(document)
+
+    if not markers:
+        return []
+
+    # Collect unique marker strings
+    unique_patterns: set[str] = set()
+    for m in markers:
+        unique_patterns.add("{{" + m["kind"] + ":" + m["block_id"] + "}}")
+
+    requests = [
+        {
+            "replaceAllText": {
+                "containsText": {"text": pattern, "matchCase": True},
+                "replaceText": "",
+            }
+        }
+        for pattern in sorted(unique_patterns)
+    ]
+
+    docs_client.documents().batchUpdate(
+        documentId=output_doc_id,
+        body={"requests": requests},
+    ).execute()
+
+    return sorted(unique_patterns)
+
+
+# ---------------------------------------------------------------------------
+# verify_output step
+# ---------------------------------------------------------------------------
+
+
+def verify_output(docs_client, output_doc_id: str) -> None:
+    """Re-read the document and assert zero leftover markers and placeholders.
+
+    Raises MarkerError if any {{BEGIN:*}} or {{END:*}} strings remain.
+    Raises MissingPlaceholderError if any {{[A-Z0-9_]+}} strings remain.
+    """
+    document = docs_client.documents().get(documentId=output_doc_id).execute()
+
+    # Collect all text from document
+    all_text = []
+    for element in document.get("body", {}).get("content", []):
+        paragraph = element.get("paragraph", {})
+        for elem in paragraph.get("elements", []):
+            text = elem.get("textRun", {}).get("content", "")
+            all_text.append(text)
+    full_text = "".join(all_text)
+
+    # Check for leftover markers
+    leftover_markers = MARKER_RE.findall(full_text)
+    if leftover_markers:
+        found = sorted({f"{{{{{k}:{v}}}}}" for k, v in leftover_markers})
+        raise MarkerError(f"Leftover markers after strip: {found}")
+
+    # Check for leftover placeholders
+    leftover_placeholders = PLACEHOLDER_RE.findall(full_text)
+    if leftover_placeholders:
+        found = sorted(set(leftover_placeholders))
+        raise MissingPlaceholderError(found)
+
+
+# ---------------------------------------------------------------------------
 # Assembly orchestration
 # ---------------------------------------------------------------------------
 
@@ -492,17 +626,190 @@ def assemble(
         }
     )
 
-    # Stub: fill_placeholders, strip_markers, verify_output, submit_for_review (Issues #14-15)
+    # ------------------------------------------------------------------
+    # Step: fill_placeholders
+    # ------------------------------------------------------------------
+    _emit({"event": "step_started", "step": "fill_placeholders", "job_id": job_id, "detail": {}})
+
+    try:
+        replaced_keys = fill_placeholders(
+            docs_client,
+            output_doc_id,
+            recipe_data.get("placeholder_map", {}),
+            request_data.get("placeholder_values", {}),
+        )
+    except MissingPlaceholderError as exc:
+        _emit(
+            {
+                "event": "job_failed",
+                "step": "fill_placeholders",
+                "job_id": job_id,
+                "detail": {
+                    "error": {
+                        "code": "missing_placeholder",
+                        "message": str(exc),
+                        "retryable": False,
+                        # Note: do NOT include actual values — SB-06
+                        "missing_keys": exc.args[0] if exc.args else [],
+                    }
+                },
+            }
+        )
+        if ledger and job_id:
+            try:
+                ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
+            except Exception:  # noqa: BLE001
+                pass
+        return 1
+    except Exception as exc:  # noqa: BLE001
+        _emit(
+            {
+                "event": "job_failed",
+                "step": "fill_placeholders",
+                "job_id": job_id,
+                "detail": {
+                    "error": {"code": "api_error", "message": str(exc), "retryable": True}
+                },
+            }
+        )
+        if ledger and job_id:
+            try:
+                ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
+            except Exception:  # noqa: BLE001
+                pass
+        return 2
+
+    _emit(
+        {
+            "event": "step_succeeded",
+            "step": "fill_placeholders",
+            "job_id": job_id,
+            "detail": {"replaced_keys": replaced_keys},
+        }
+    )
+
+    # ------------------------------------------------------------------
+    # Step: strip_markers
+    # ------------------------------------------------------------------
+    _emit({"event": "step_started", "step": "strip_markers", "job_id": job_id, "detail": {}})
+
+    try:
+        stripped = strip_markers(docs_client, output_doc_id)
+    except Exception as exc:  # noqa: BLE001
+        _emit(
+            {
+                "event": "job_failed",
+                "step": "strip_markers",
+                "job_id": job_id,
+                "detail": {
+                    "error": {"code": "api_error", "message": str(exc), "retryable": True}
+                },
+            }
+        )
+        if ledger and job_id:
+            try:
+                ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
+            except Exception:  # noqa: BLE001
+                pass
+        return 2
+
+    _emit(
+        {
+            "event": "step_succeeded",
+            "step": "strip_markers",
+            "job_id": job_id,
+            "detail": {"stripped_markers": stripped},
+        }
+    )
+
+    # ------------------------------------------------------------------
+    # Step: verify_output
+    # ------------------------------------------------------------------
+    _emit({"event": "step_started", "step": "verify_output", "job_id": job_id, "detail": {}})
+
+    try:
+        verify_output(docs_client, output_doc_id)
+    except MarkerError as exc:
+        _emit(
+            {
+                "event": "job_failed",
+                "step": "verify_output",
+                "job_id": job_id,
+                "detail": {
+                    "error": {
+                        "code": "marker_error",
+                        "message": str(exc),
+                        "retryable": False,
+                    }
+                },
+            }
+        )
+        if ledger and job_id:
+            try:
+                ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
+            except Exception:  # noqa: BLE001
+                pass
+        return 1
+    except MissingPlaceholderError as exc:
+        _emit(
+            {
+                "event": "job_failed",
+                "step": "verify_output",
+                "job_id": job_id,
+                "detail": {
+                    "error": {
+                        "code": "missing_placeholder",
+                        "message": str(exc),
+                        "retryable": False,
+                    }
+                },
+            }
+        )
+        if ledger and job_id:
+            try:
+                ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
+            except Exception:  # noqa: BLE001
+                pass
+        return 1
+    except Exception as exc:  # noqa: BLE001
+        _emit(
+            {
+                "event": "job_failed",
+                "step": "verify_output",
+                "job_id": job_id,
+                "detail": {
+                    "error": {"code": "api_error", "message": str(exc), "retryable": True}
+                },
+            }
+        )
+        if ledger and job_id:
+            try:
+                ledger.update_job(job_id, {"status": "failed", "finished_at": _now_iso()})
+            except Exception:  # noqa: BLE001
+                pass
+        return 2
+
+    _emit(
+        {
+            "event": "step_succeeded",
+            "step": "verify_output",
+            "job_id": job_id,
+            "detail": {},
+        }
+    )
+
+    # Stub: submit_for_review (Issue #15)
     _emit(
         {
             "event": "job_completed",
-            "step": "prune_blocks",
+            "step": "verify_output",
             "job_id": job_id,
             "detail": {
                 "output_document_id": output_doc_id,
                 "resolved_blocks": resolved_blocks,
                 "pruned_blocks": pruned,
-                "note": "Stub — fill/strip/verify/submit implemented in Issues #14-15",
+                "replaced_keys": replaced_keys,
+                "note": "Stub — submit_for_review implemented in Issue #15",
             },
         }
     )
