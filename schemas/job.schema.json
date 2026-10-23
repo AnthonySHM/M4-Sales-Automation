@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/job.schema.json",
+  "title": "AssemblyJob",
+  "description": "Persistent record of a single document-assembly job. Every field except output_document_id and finished_at must be set when the job is created or immediately after the relevant step. (scope plan §4.2 AssemblyJob, G-09, AD-12, AD-13)",
+  "type": "object",
+  "required": [
+    "job_id",
+    "workspace_id",
+    "request_id",
+    "recipe_version",
+    "master_revision_id",
+    "resolved_blocks",
+    "output_document_id",
+    "status",
+    "error",
+    "run_by",
+    "started_at",
+    "finished_at",
+    "created_at",
+    "updated_at"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "job_id": {
+      "type": "string",
+      "description": "Unique job identifier."
+    },
+    "workspace_id": {
+      "type": "string",
+      "description": "Immutable workspace identifier. Required on every workspace-owned record (AD-13)."
+    },
+    "request_id": {
+      "type": "string",
+      "description": "Reference to the originating AssemblyRequest. Unique per workspace (G-09)."
+    },
+    "recipe_version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Recipe version pinned at job start. Immutable after resolving."
+    },
+    "master_revision_id": {
+      "type": "string",
+      "description": "Drive revision ID of the master template at copy time. Immutable after copy (AD-11)."
+    },
+    "resolved_blocks": {
+      "type": "array",
+      "description": "Final ordered list of block IDs to retain. Fixed before any document mutation (scope plan §4.4 invariant 2).",
+      "items": {
+        "type": "string",
+        "pattern": "^[a-z0-9_]{3,64}$"
+      }
+    },
+    "output_document_id": {
+      "type": ["string", "null"],
+      "description": "Drive file ID of the assembled output document, or null before the copy step completes."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "requested",
+        "validating",
+        "resolving",
+        "building",
+        "verifying",
+        "awaiting_review",
+        "approved",
+        "rejected",
+        "failed",
+        "cancelled"
+      ],
+      "description": "Current lifecycle state. See scope plan §4.3 AssemblyJob transitions."
+    },
+    "error": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "required": ["code", "step", "message", "retryable"],
+          "additionalProperties": false,
+          "properties": {
+            "code": {
+              "type": "string",
+              "enum": [
+                "unknown_option",
+                "missing_placeholder",
+                "marker_error",
+                "master_revision_mismatch",
+                "recipe_conflict",
+                "api_error"
+              ],
+              "description": "Structured error code matching the exception classes in architecture §4.4."
+            },
+            "step": {
+              "type": "string",
+              "enum": [
+                "validate_request",
+                "resolve_blocks",
+                "copy_master",
+                "prune_blocks",
+                "fill_placeholders",
+                "strip_markers",
+                "verify_output",
+                "submit_for_review"
+              ],
+              "description": "The JobStep in which the error occurred."
+            },
+            "message": {
+              "type": "string",
+              "description": "Human-readable error description. Must not contain PII or document content (SB-06)."
+            },
+            "retryable": {
+              "type": "boolean",
+              "description": "true if retrying with the same inputs may succeed (e.g. transient API error)."
+            }
+          }
+        }
+      ],
+      "description": "Structured error detail when status is 'failed', otherwise null."
+    },
+    "run_by": {
+      "type": "string",
+      "description": "Member ID or identity of the person who invoked the skill (R-05)."
+    },
+    "started_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$",
+      "description": "ISO 8601 timestamp when the job transitioned from 'requested' to 'validating'."
+    },
+    "finished_at": {
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+        }
+      ],
+      "description": "ISO 8601 timestamp when the job reached a terminal state, or null if still active."
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$",
+      "description": "ISO 8601 timestamp when this ledger record was created."
+    },
+    "updated_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$",
+      "description": "ISO 8601 timestamp of the last ledger write to this record."
+    }
+  }
+}

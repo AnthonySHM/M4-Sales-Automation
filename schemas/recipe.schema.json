@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/recipe.schema.json",
+  "title": "AssemblyRecipe",
+  "description": "Declarative JSON recipe that maps request options to block IDs and placeholder values. Versioned and immutable once published. (scope plan §4.2, AD-06, G-02)",
+  "type": "object",
+  "required": [
+    "family_key",
+    "version",
+    "options",
+    "rules",
+    "defaults",
+    "placeholder_map",
+    "status"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "family_key": {
+      "type": "string",
+      "description": "Document family this recipe applies to."
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Monotonically increasing version number. Pinned at job start."
+    },
+    "options": {
+      "type": "array",
+      "description": "Schema of valid request options for this family.",
+      "items": {
+        "type": "object",
+        "required": ["option_key", "allowed_values", "required"],
+        "additionalProperties": false,
+        "properties": {
+          "option_key": {
+            "type": "string"
+          },
+          "allowed_values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "required": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "description": "Ordered list of conditional rules. Evaluated in order; conflicts (a block both included and excluded) fail validation (AD-06).",
+      "items": {
+        "type": "object",
+        "required": ["when"],
+        "additionalProperties": false,
+        "properties": {
+          "when": {
+            "type": "object",
+            "description": "Condition: option key-value pair(s) that trigger this rule.",
+            "minProperties": 1,
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "include": {
+            "type": "array",
+            "description": "Block IDs to include when the condition is met.",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]{3,64}$"
+            }
+          },
+          "exclude": {
+            "type": "array",
+            "description": "Block IDs to exclude when the condition is met.",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z0-9_]{3,64}$"
+            }
+          }
+        }
+      }
+    },
+    "defaults": {
+      "type": "object",
+      "description": "Blocks kept unless a rule excludes them.",
+      "required": ["include"],
+      "additionalProperties": false,
+      "properties": {
+        "include": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9_]{3,64}$"
+          }
+        }
+      }
+    },
+    "placeholder_map": {
+      "type": "object",
+      "description": "Maps placeholder keys (^[A-Z0-9_]+$) to request field names.",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "patternProperties": {
+        "^[A-Z0-9_]+$": {
+          "type": "string"
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": ["draft", "validated", "published", "deprecated"],
+      "description": "Lifecycle state. Immutable once 'published'. (scope plan §4.3 AssemblyRecipe lifecycle)"
+    }
+  }
+}

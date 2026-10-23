@@ -92,12 +92,14 @@ Agents **never** merge changes to the above artefacts without explicit human app
 ### 3.3 QA subagent
 - Opens a **fresh context window** — no shared state with the SWE session.
 - Verifies per `_docs/team/qa-engineer.md`.
+- **Ticks every passing AC checkbox** in the issue body using `gh issue edit <N> --body "..."` with `- [ ]` replaced by `- [x]` for each passing criterion. Leaves failing criteria as `- [ ]`.
 - Posts `## QA: PASS` or `## QA: FAIL` with full evidence.
 - Does **not** close the issue and does **not** fix code.
 
 ### 3.4 Orchestrator (main session)
 - The **only** agent that may close a GitHub Issue.
-- Closes the issue only on an explicit `QA: PASS` comment.
+- **Before closing**, reads the issue body and confirms every AC checkbox is ticked `- [x]`. If any are still `- [ ]`, ticks them via `gh issue edit` before proceeding.
+- Closes the issue only after all checkboxes are `- [x]` and an explicit `QA: PASS` comment exists.
 - After closing, removes the worktree and deletes the feature branch (see §5).
 - On `QA: FAIL`, routes back to the SWE subagent with the defect comment.
 - On the third consecutive `QA: FAIL`, labels the issue `needs-human` and picks the next issue.

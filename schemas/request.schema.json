@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.com/schemas/request.schema.json",
+  "title": "AssemblyRequest",
+  "description": "Represents a single document-assembly request. request_id is the caller-supplied idempotency key. (scope plan §6.3, AD-06, AD-13)",
+  "type": "object",
+  "required": [
+    "request_id",
+    "workspace_id",
+    "family_key",
+    "options",
+    "placeholder_values",
+    "requested_by"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "request_id": {
+      "type": "string",
+      "description": "Caller-supplied idempotency key. Unique per workspace."
+    },
+    "workspace_id": {
+      "type": "string",
+      "description": "Immutable workspace identifier. Required on every workspace-owned record (AD-13)."
+    },
+    "family_key": {
+      "type": "string",
+      "description": "Document family identifier (e.g. 'family_a')."
+    },
+    "options": {
+      "type": "object",
+      "description": "Per-request option key-value pairs. Keys and values are strings.",
+      "additionalProperties": {
+        "type": "string"
+      }
+    },
+    "placeholder_values": {
+      "type": "object",
+      "description": "Placeholder substitution values. Keys must match ^[A-Z0-9_]+$ (scope plan §4.2 Placeholder entity).",
+      "additionalProperties": {
+        "type": "string"
+      },
+      "patternProperties": {
+        "^[A-Z0-9_]+$": {
+          "type": "string"
+        }
+      }
+    },
+    "requested_by": {
+      "type": "string",
+      "description": "Identity (email or member ID) of the person who submitted the request."
+    },
+    "raw_input_ref": {
+      "type": "string",
+      "description": "Optional reference to the original free-text ask. Never the content itself in the ledger (SB-06)."
+    }
+  }
+}

@@ -172,11 +172,26 @@ class TestDoctor:
 # scan_template.py
 # ---------------------------------------------------------------------------
 
+def _make_empty_fake_docs_client():
+    """Minimal fake Docs client returning an empty document (no markers)."""
+    class _Exec:
+        def execute(self):
+            return {"body": {"content": []}}
+    class _Docs:
+        def get(self, documentId):
+            return _Exec()
+    class _Client:
+        def documents(self):
+            return _Docs()
+    return _Client()
+
+
 class TestScanTemplate:
     def test_exits_zero_with_file_id(self, capsys):
-        """scan_template exits 0 (stub) when --file-id is provided."""
+        """scan_template exits 0 when --file-id is provided and doc has no issues."""
+        client = _make_empty_fake_docs_client()
         with pytest.raises(SystemExit) as exc_info:
-            scan_template.main(["--file-id", "fake-doc-id-123"])
+            scan_template.main(["--file-id", "fake-doc-id-123"], docs_client=client)
         assert exc_info.value.code == 0
         result = json.loads(capsys.readouterr().out)
         assert "issues" in result
@@ -184,8 +199,9 @@ class TestScanTemplate:
 
     def test_stdout_structure(self, capsys):
         """scan_template result contains all required top-level keys."""
+        client = _make_empty_fake_docs_client()
         with pytest.raises(SystemExit):
-            scan_template.main(["--file-id", "fake-doc-id"])
+            scan_template.main(["--file-id", "fake-doc-id"], docs_client=client)
         result = json.loads(capsys.readouterr().out)
         for key in ("file_id", "markers_found", "issues", "summary"):
             assert key in result, f"Missing key: {key}"
@@ -203,8 +219,9 @@ class TestScanTemplate:
     ])
     def test_accepts_various_file_ids(self, file_id, capsys):
         """scan_template accepts any non-empty string as file-id."""
+        client = _make_empty_fake_docs_client()
         with pytest.raises(SystemExit) as exc_info:
-            scan_template.main(["--file-id", file_id])
+            scan_template.main(["--file-id", file_id], docs_client=client)
         assert exc_info.value.code == 0
 
 
