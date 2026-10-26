@@ -1,0 +1,62 @@
+/* M4 Sales Automation — base stylesheet (AD-19) */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, sans-serif;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: #212529;
+    background-color: #f8f9fa;
+}
+
+nav {
+    background-color: #343a40;
+    color: #fff;
+    padding: 0.75rem 1.5rem;
+}
+
+nav a {
+    color: #adb5bd;
+    text-decoration: none;
+    margin-right: 1rem;
+}
+
+nav a:hover {
+    color: #fff;
+}
+
+main {
+    padding: 1.5rem;
+}
+
+.flash {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 0.25rem;
+}
+
+.flash-info {
+    background-color: #cff4fc;
+    color: #055160;
+}
+
+.flash-success {
+    background-color: #d1e7dd;
+    color: #0f5132;
+}
+
+.flash-warning {
+    background-color: #fff3cd;
+    color: #664d03;
+}
+
+.flash-error {
+    background-color: #f8d7da;
+    color: #842029;
+}

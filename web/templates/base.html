@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}M4 Sales Automation{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='style.css') }}">
+</head>
+<body>
+
+<nav>
+    {# Navigation placeholder — links added when routes are implemented (#38–#41) #}
+    <strong>M4 Sales Automation</strong>
+</nav>
+
+<main>
+    {# Flash message block — populated by routes that set request.session["flash"] #}
+    {% if flash_messages is defined %}
+        {% for message in flash_messages %}
+            <div class="flash flash-{{ message.level }}">{{ message.text }}</div>
+        {% endfor %}
+    {% endif %}
+
+    {% block content %}{% endblock %}
+</main>
+
+</body>
+</html>

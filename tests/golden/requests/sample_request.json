@@ -1,0 +1,8 @@
+{
+  "request_id": "sample-request-001",
+  "workspace_id": "workspace-pilot",
+  "family_key": "family_a",
+  "options": {},
+  "placeholder_values": {},
+  "requested_by": "qa@example.com"
+}
