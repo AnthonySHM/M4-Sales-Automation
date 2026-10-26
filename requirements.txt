@@ -6,6 +6,12 @@ jsonschema==4.23.0
 PyYAML==6.0.2
 pytest==8.3.3
 pytest-mock==3.14.0
+# Web framework (AD-15, AD-19, Issue #34)
+fastapi==0.115.14
+uvicorn[standard]==0.34.3
+jinja2==3.1.6
+python-multipart==0.0.32
+itsdangerous==2.2.0
 # Dev / CI tooling
 detect-secrets==1.5.0   # Secret scanning in pre-commit and CI (SB-02)
 pre-commit==4.7.0       # Hook runner (code standards, SB-02)
