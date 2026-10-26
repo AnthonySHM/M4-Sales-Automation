@@ -1,0 +1,11 @@
+{
+  "family_key": "family_a",
+  "version": 1,
+  "options": [],
+  "rules": [],
+  "defaults": {
+    "include": []
+  },
+  "placeholder_map": {},
+  "status": "published"
+}

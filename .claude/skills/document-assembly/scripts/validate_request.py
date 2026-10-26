@@ -15,8 +15,11 @@ Exit codes:
   2 — external / transient error (reserved; not raised here)
   3 — credential / permission error (reserved; not raised here)
 
-Advances G-02, G-03, AD-06. Full implementation for Issue #11.
+Advances G-02, G-03, AD-06, AD-20. Full implementation for Issue #11.
+Importable API added for Issue #38.
 """
+
+from __future__ import annotations
 
 import argparse
 import json
@@ -27,6 +30,28 @@ class _Parser(argparse.ArgumentParser):
     def error(self, message):
         print(json.dumps({"error": {"code": "missing_argument", "message": message}}))
         sys.exit(1)
+
+
+def validate_request(request: dict, recipe: dict) -> dict:
+    """Public importable API (AD-20, §11.4). No side effects at import time (TL-15).
+
+    Validates *request* against *recipe* and returns a result dict.
+
+    Parameters
+    ----------
+    request:
+        Assembly request dict (matches request.schema.json).
+    recipe:
+        Recipe dict (matches recipe.schema.json).
+
+    Returns
+    -------
+    dict
+        ``{"valid": bool, "errors": list[dict]}`` where each error dict has
+        keys ``field``, ``code``, and ``message``.
+    """
+    errors = validate(request, recipe)
+    return {"valid": len(errors) == 0, "errors": errors}
 
 
 def validate(request: dict, recipe: dict) -> list:
