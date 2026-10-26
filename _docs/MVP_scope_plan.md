@@ -12,13 +12,14 @@
 | Field | Value |
 |---|---|
 | Document ID | `SPEC-MVP-002` |
-| Version | 0.2.0 |
+| Version | 0.3.0 |
 | Status | Draft. Analyst defaults await stakeholder confirmation (see §1.6) |
-| Created / updated | 2026-10-22 |
+| Created | 2026-10-22 · Updated 2026-10-26 |
 | Author | Systems analysis pass (Claude), from the requester's design conversation |
 | Requester | Anthony Shiloo |
 | Location | `_docs/MVP_scope_plan.md` |
 | Supersedes | `SPEC-MVP-001` v0.1.0 (generic engine spec, kept as `_docs/MVP_scope_plan.v0.1.0-generic.md`) |
+| Incorporates | `SPEC-MVP-003` (Web UI and Cloud Deployment scope, previously `_docs/MVP_scope_plan_v2_webui.md`) |
 | Audience | Downstream design, build, test and review agents, plus the human team that will run the system |
 
 ### 1.2 How to read provenance
@@ -545,3 +546,109 @@ Each must cite the IDs used here (U-, AD-, CORR-, G-, NF-, SB-, TL-):
 | G-12 Access | U-07 | AD-07, AD-08 | ServiceIdentity | SB-01–SB-04, TL-06 |
 | G-13 Observable status | brief | AD-12 | Event | NF-03 |
 | G-14 Value | U-02 | AD-14 | — | — |
+
+---
+
+## 7. Scope 2: Web UI and Cloud Deployment
+
+> All prior decisions, entities, schemas and goals (§§1–6) remain in force. This section extends the project with a browser-based interface and always-on cloud hosting. Build order: Claude Code skill first (P0–P5), web UI as an additive layer on top (P6–P10). Nothing from Scope 1 is rewritten.
+
+### 7.1 Revised understanding from design conversation
+
+| Point | Detail |
+|---|---|
+| Developer role | The developer (R-04) receives user stories from workers and converts them into Claude skills. Claude Code is the developer's tool, not the workers' tool. |
+| Worker interface | Workers can use Claude Code if they have it. The web UI is a second interface for workers who don't have Claude Code, or who prefer a browser. |
+| Claude skills vs web UI | Claude Code skills (`SKILL.md`) only work in Claude Code. The web UI replicates the skill experience by calling the Claude API with a system prompt derived from `SKILL.md` instructions. |
+| Build strategy | Build the Claude Code skill and all scripts first (Scope 1). The web UI is a thin layer that imports the same scripts as modules. One codebase, two interfaces. |
+| Always-on requirement | The web service runs on cloud infrastructure independent of any individual's PC. Credentials live in a cloud secret store; no teammate downloads or holds the key file. |
+
+### 7.2 New architectural decisions (AD-15–AD-25)
+
+| ID | Decision | Origin | Rationale | Revisit if… |
+|---|---|---|---|---|
+| AD-15 | **Web framework: FastAPI.** The web app is a Python FastAPI application. It imports the existing scripts as modules and exposes HTTP endpoints. | ASSUMED | Async-native, idiomatic Python 3.11+, automatic OpenAPI docs | Team has strong Flask preference |
+| AD-16 | **Authentication: Google OAuth 2.0 (per-user).** Users log in with their Google account. The app checks the email against the `members` list in `config/workspace.yaml` and assigns roles. | ASSUMED | Team already uses Google Workspace; no new password store needed | Org uses a different identity provider |
+| AD-17 | **Cloud platform: Google Cloud Run.** The FastAPI app is containerised (Docker) and deployed to Cloud Run. Scales to zero when idle; no server management. | ASSUMED | Lowest operational burden; same Google Cloud project as the service account and Secret Manager | Volume exceeds Cloud Run free tier |
+| AD-18 | **Credential storage: Google Secret Manager.** The service-account key JSON and all other secrets are stored in Secret Manager. Cloud Run injects them as environment variables at runtime. No teammate downloads the key file. | AGREED | Eliminates per-machine credential distribution. Audit logging and rotation built in. | — |
+| AD-19 | **Frontend: server-rendered HTML (Jinja2).** No JavaScript framework. Forms submit via HTTP POST. Status pages use a meta-refresh or minimal fetch for polling. | ASSUMED | No frontend build pipeline; maintainable without frontend expertise; internal team audience | Team needs real-time push or rich interactive UI |
+| AD-20 | **Scripts promoted to importable modules.** All scripts expose a callable Python API in addition to their CLI entry points. CLI contracts from `_docs/architecture.md` §4 are preserved unchanged. | INFERRED | Web app calls functions directly; CLI still works for developers and tests; one codebase, two entry points | — |
+| AD-21 | **Synchronous job execution with timeout guard.** Assembly jobs run in the web request handler with a hard timeout aligned to NF-02. A background queue is deferred. | ASSUMED | Simplest correct implementation for ≤ 50 jobs/day. Avoids introducing Celery or Cloud Tasks in Scope 2 | Concurrent submissions cause timeouts; introduce Cloud Tasks in Scope 3 |
+| AD-22 | **Role enforcement at the HTTP layer.** Every route checks the authenticated user's role before executing. The permission matrix from §2.1 is authoritative. | AGREED | Same access model whether the trigger is Claude Code or a browser | — |
+| AD-23 | **HTTPS only.** Cloud Run serves HTTPS by default. No HTTP in production. Local development may use HTTP on localhost only. | AGREED | Credentials and contract data must not travel in the clear | — |
+| AD-24 | **Claude Code remains the developer interface.** Developers use Claude Code to build, test and maintain the system. The web UI does not replace Claude Code for this role. | AGREED | Scope 2 widens access for non-technical roles; it does not replace the development toolchain | — |
+| AD-25 | **Claude API as web UI intelligence layer.** The web submission form optionally accepts a free-text description. A system prompt derived from `SKILL.md` instructions and the active recipe is sent to the Claude API. Claude returns structured JSON that pre-fills the form fields; the user reviews and confirms before the job runs. This replicates the conversational SKILL.md experience for browser users without Claude Code. | INFERRED | Workers submit user stories; the developer converts them to skills; the Claude API brings that skill intelligence to the web UI without requiring Claude Code on the worker's machine | Requests are always simple enough for manual form entry |
+
+### 7.3 New user role
+
+| ID | Role | Scope | Responsibilities |
+|---|---|---|---|
+| R-09 | **Deployment Operator** | Platform | Manages the Cloud Run service, Secret Manager secrets, Cloud Build pipeline, and Cloud Run IAM. Responsible for secret rotation in the cloud environment. May overlap with R-01 (System Administrator). |
+
+### 7.4 New system goals (G-15–G-22)
+
+| ID | Goal | Acceptance criterion | Traces to |
+|---|---|---|---|
+| G-15 | **Browser-accessible job submission** | An R-05 user with only a browser and a Google account can submit a valid assembly request and receive a Drive link — no local Python, no CLI, no credential file | U2-01, AD-15, AD-19, AD-25 |
+| G-16 | **Browser-accessible review** | An R-06 user can approve or reject a job from the browser; the decision is recorded in the ledger and the document is moved | AD-22, G-07 |
+| G-17 | **Always-on service** | The web app serves requests when the developer's PC is off. Verified by submitting a job from a second device while the development machine is shut down | U2-03, AD-17 |
+| G-18 | **No teammate holds credentials** | No team member (other than R-09) downloads, stores or rotates the service-account key. The key exists only in Secret Manager. A new teammate completes a job with zero credential steps | U2-03, AD-18, SB-02 |
+| G-19 | **Role enforcement at HTTP layer** | An authenticated R-05 user attempting a review action receives HTTP 403. An unauthenticated request to any protected route redirects to login. Covered by automated route-level tests | AD-22 |
+| G-20 | **CLI contracts unchanged after module refactor** | All scripts pass their existing contract tests (`tests/contract/`) after AD-20 refactor. No CLI argument or exit code changes | AD-20 |
+| G-21 | **Job dashboard** | Authenticated users can view all jobs, their status, requester, family, and output link. Status reflects ledger within NF-03 | G-13, AD-19 |
+| G-22 | **Deployment reproducibility** | An R-09 operator can deploy the app to a new Cloud Run service from the repo and a single secret, following the deployment README, with no code changes | AD-17, AD-18, G-11 |
+
+### 7.5 New non-functional bounds (NF-09–NF-14)
+
+| ID | Dimension | Bound |
+|---|---|---|
+| NF-09 | Response time | Web pages load in ≤ 3 s. Job submission returns a job ID immediately; result page loads when assembly completes (≤ NF-02) |
+| NF-10 | Availability | Cloud Run target: 99.5% monthly uptime. Scale-to-zero cold start ≤ 10 s acceptable for pilot volume |
+| NF-11 | Concurrent users | Designed for ≤ 10 simultaneous browser sessions in pilot |
+| NF-12 | Secret rotation | Service-account key rotated in Secret Manager ≤ every 90 days (SB-03). New version deployed with zero downtime via Cloud Run revision traffic split |
+| NF-13 | Session lifetime | Web sessions expire after 8 hours of inactivity |
+| NF-14 | Deployment time | Code change → live on Cloud Run in ≤ 10 min via Cloud Build pipeline |
+
+### 7.6 New security boundaries (SB-10–SB-16)
+
+| ID | Boundary | Rule |
+|---|---|---|
+| SB-10 | **No credentials in the container image** | The Docker image contains no secrets. All secrets injected at runtime from Secret Manager via Cloud Run environment variables (AD-18) |
+| SB-11 | **Session cookie security** | Session cookies are `HttpOnly`, `Secure`, `SameSite=Lax`, signed with a key from Secret Manager |
+| SB-12 | **CSRF protection** | All state-changing POST routes require a CSRF token. GET routes are read-only |
+| SB-13 | **Google OAuth scope minimisation** | OAuth consent requests only `openid` and `email`. No Google Drive or Docs access is granted to the user's personal Google account — all Drive operations use the service account (AD-07) |
+| SB-14 | **Input sanitisation** | All user-supplied form values are validated against the recipe schema before any script is called. No value is written to a document without passing `validate_request` first |
+| SB-15 | **Container least privilege** | Cloud Run service runs as a non-root user. The service account attached to Cloud Run has only `secretmanager.secretAccessor` and the Drive/Docs/Sheets scopes from SB-04 |
+| SB-16 | **Web action audit log** | Every job submission, approval, and rejection from the web UI records the authenticated `member_id`, timestamp, and IP in the AuditRecord (no document content) |
+
+### 7.7 New technical limits (TL-12–TL-17)
+
+| ID | Limit | Consequence and design rule |
+|---|---|---|
+| TL-12 | Cloud Run request timeout | Default 60 s; must be raised to ≥ 130 s to cover NF-02 + headroom. Set in deployment config. VERIFY current Cloud Run max timeout |
+| TL-13 | Cold start latency | Scale-to-zero means the first request after idle incurs a cold start (typically 2–5 s). Set min-instances=1 if unacceptable |
+| TL-14 | Google OAuth redirect URI | The OAuth callback URI must be registered in the Google Cloud Console. Must be updated if the Cloud Run service URL changes |
+| TL-15 | Module import side effects | Scripts refactored per AD-20 must not execute code at import time (no top-level API calls, no `sys.exit`). CLI entry points guarded with `if __name__ == "__main__"` |
+| TL-16 | Synchronous job timeout | If `assemble()` exceeds NF-02, the web request times out. Implement a hard `threading.Timer` guard inside the request handler that transitions the job to `failed` before Cloud Run kills the process |
+| TL-17 | Ledger write from web process | Same TL-09 concurrency caveat applies. Web process uses the same append-only row strategy as the CLI |
+
+### 7.8 Open questions (Scope 2)
+
+| ID | Question | Blocks |
+|---|---|---|
+| Q2-01 | Which Google Cloud project hosts Cloud Run and Secret Manager? Does one already exist from Task #2, or must a new one be created? | AD-17, AD-18, P6 |
+| Q2-02 | Is Google OAuth acceptable for authentication, or does the organisation use a different identity provider? | AD-16, G-19 |
+| Q2-03 | At what job volume or concurrency does synchronous execution (AD-21) become unacceptable? | AD-21, NF-01 |
+| Q2-04 | Does the organisation's Google Workspace edition allow the OAuth consent screen to be restricted to internal users only? VERIFY. | AD-16, SB-13 |
+| Q2-05 | Is a PDF or Word export needed at approval time (inherited from Q-09)? If yes, P9 must include a download button | G-16 |
+| Q2-06 | Should the Claude API call in AD-25 stream its response to the browser, or return the full structured JSON in one call? | AD-25, NF-09 |
+
+### 7.9 Delivery phases (Scope 2)
+
+| Phase | Output | Exit criterion |
+|---|---|---|
+| P6 Infrastructure | Cloud Run service, Secret Manager secrets, OAuth consent screen, Cloud Build pipeline | `GET /health` returns 200 from the deployed URL; no secrets in the image or repo |
+| P7 Auth and roles | Login flow, session management, role enforcement on all routes | G-19 passes; unauthenticated request redirects to login; R-05 user gets 403 on review routes |
+| P8 Job submission and dashboard | Submission form, job detail page, job dashboard | G-15, G-17, G-18, G-20, G-21 pass; existing contract tests still green |
+| P9 Review UI | Browser-based approve/reject form | G-16 passes; G-07 (Scope 1) still passes via web path |
+| P10 Claude API + pilot | Natural language form input via Claude API; ≥ 5 real contracts submitted by non-developer teammates | G-15 enhanced with natural language; G-14 updated with web-path measurements |

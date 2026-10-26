@@ -177,4 +177,4 @@ Run cleanup **only after the issue is closed** and the PR is merged to `main`.
                                              needs-human (3rd FAIL)
 ```
 
-Labels used: `phase:P0`–`phase:P5`, `human`, `blocked: question`, `needs-grooming`, `in-progress`, `needs-human`, `backlog`.
+Labels used: `phase:P0`–`phase:P10`, `human`, `blocked: question`, `needs-grooming`, `in-progress`, `needs-human`, `backlog`.
