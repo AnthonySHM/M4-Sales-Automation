@@ -14,8 +14,11 @@ Exit codes:
   2 — external / transient error (e.g. API 500/503)
   3 — credential / permission error (e.g. API 403)
 
-Advances G-01, AD-05. Full implementation for Issue #8.
+Advances G-01, AD-05, AD-20. Full implementation for Issue #8.
+Importable API added for Issue #38.
 """
+
+from __future__ import annotations
 
 import argparse
 import json
@@ -128,6 +131,56 @@ def scan(docs_client, file_id, registry_path=None):
         with open(registry_path) as f:
             registry_data = json.load(f)
         registry_blocks = registry_data.get("blocks", [])
+
+    document = docs_client.documents().get(documentId=file_id).execute()
+    raw_markers = _extract_markers(document)
+
+    markers_found = [
+        {
+            "block_id": m["block_id"],
+            "start_index": m["start_index"],
+            "end_index": m["end_index"],
+        }
+        for m in raw_markers
+        if m["kind"] == "BEGIN"
+    ]
+
+    issues = _find_issues(raw_markers, registry_blocks)
+    issue_count = sum(len(v) for v in issues.values())
+
+    return {
+        "file_id": file_id,
+        "markers_found": markers_found,
+        "issues": issues,
+        "summary": {
+            "total_markers": len(markers_found),
+            "issue_count": issue_count,
+        },
+    }
+
+
+def scan_template(file_id: str, registry: dict, docs_client) -> dict:
+    """Public importable API (AD-20, §11.4). No side effects at import time (TL-15).
+
+    Scan *file_id* for block-marker issues using an already-loaded *registry* dict.
+
+    Parameters
+    ----------
+    file_id:
+        Google Drive file ID of the master template document.
+    registry:
+        Block registry dict (matches registry.schema.json). Pass ``{"blocks": []}``
+        to skip the registry cross-check.
+    docs_client:
+        An authenticated Docs v1 resource injected by the caller (never built
+        inside this function — dependency injection per architecture §9).
+
+    Returns
+    -------
+    dict
+        Scan result matching the §4.2 contract, always containing key ``summary``.
+    """
+    registry_blocks: list | None = registry.get("blocks") if registry else None
 
     document = docs_client.documents().get(documentId=file_id).execute()
     raw_markers = _extract_markers(document)

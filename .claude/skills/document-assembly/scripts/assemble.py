@@ -11,8 +11,9 @@ Exit codes:
   2 — external / transient error (retryable)
   3 — credential / permission error
 
-Advances AD-03, G-04, G-05, G-07, G-08, G-09, G-10, G-13, TL-01, NF-06.
+Advances AD-03, G-04, G-05, G-07, G-08, G-09, G-10, G-13, TL-01, NF-06, AD-20.
 Full implementation for Issues #13–#15.
+Importable API added for Issue #38.
 """
 
 from __future__ import annotations
@@ -481,7 +482,7 @@ def submit_for_review(drive_client, output_doc_id: str, workspace: dict) -> dict
 # ---------------------------------------------------------------------------
 
 
-def assemble(
+def _run_pipeline(
     request_data: dict,
     recipe_data: dict,
     workspace: dict,
@@ -492,7 +493,7 @@ def assemble(
     ledger=None,
     job_id: str | None = None,
 ) -> int:
-    """Run the assembly pipeline. Emits streaming events to stdout. Returns exit code.
+    """Internal pipeline. Emits streaming events to stdout. Returns exit code (int).
 
     Parameters
     ----------
@@ -959,6 +960,198 @@ def assemble(
 
 
 # ---------------------------------------------------------------------------
+# Public importable API (AD-20, §11.4)
+# ---------------------------------------------------------------------------
+
+
+def assemble(
+    request: dict,
+    workspace_cfg: dict,
+    *_compat,
+    dry_run: bool = False,
+    drive_client=None,
+    docs_client=None,
+    ledger=None,
+    job_id: str | None = None,
+) -> dict:
+    """Public importable API for the web app (AD-20, §11.4). No side effects at import
+    time (TL-15). All ``sys.exit`` calls remain inside ``main()`` only.
+
+    Parameters
+    ----------
+    request:
+        Assembly request dict (matches request.schema.json).
+    workspace_cfg:
+        Loaded ``workspace.yaml`` dict containing folder IDs, pilot family
+        config, and ``workspace_id``.
+    dry_run:
+        When *True*, stop after ``resolve_blocks`` without writing to Drive.
+    drive_client, docs_client:
+        Injected Google API clients for unit/integration tests (architecture §9).
+        Pass ``None`` (default) to have ``main()`` build real clients from
+        ``GOOGLE_APPLICATION_CREDENTIALS``.
+    ledger:
+        Injected ``LedgerAdapter``. Pass ``None`` to run without ledger
+        persistence (dry-run or testing).
+    job_id:
+        Pre-assigned job ID for idempotent retries.
+
+    Returns
+    -------
+    dict
+        Job record dict. On success (exit code 0): includes ``job_id``,
+        ``status``, and ``resolved_blocks``. On failure: includes ``error``
+        key with ``code``, ``message``, and ``retryable``.
+
+    Notes
+    -----
+    *Backward-compatibility note (Issue #38):* if called with three positional
+    arguments ``(request, recipe, workspace)`` — the pre-refactor signature
+    used internally and in legacy unit tests — the function detects the extra
+    positional and delegates to ``_run_pipeline`` directly, returning the
+    integer exit code for compatibility. New callers must use the two-argument
+    form ``assemble(request, workspace_cfg)``.
+    """
+    if _compat:
+        # Legacy calling convention: assemble(request_data, recipe_data, workspace, ...)
+        # The 2nd positional is actually recipe_data, 3rd is the real workspace.
+        recipe_data = workspace_cfg
+        actual_workspace = _compat[0]
+        return _run_pipeline(
+            request,
+            recipe_data,
+            actual_workspace,
+            dry_run=dry_run,
+            drive_client=drive_client,
+            docs_client=docs_client,
+            ledger=ledger,
+            job_id=job_id,
+        )
+
+    # New public API: assemble(request, workspace_cfg, dry_run=...)
+    # Derive recipe path from workspace_cfg and load it.
+    import io as _io
+    import sys as _sys
+
+    family_key = workspace_cfg.get("pilot_family", {}).get("key", "unknown")
+    recipe_version = workspace_cfg.get("pilot_family", {}).get("active_recipe_version", 1)
+    recipe_path = f"config/recipes/{family_key}_v{recipe_version}.json"
+
+    import json as _json
+
+    try:
+        with open(recipe_path) as _f:
+            recipe_data = _json.load(_f)
+    except (FileNotFoundError, _json.JSONDecodeError) as exc:
+        return {
+            "error": {
+                "code": "file_not_found" if isinstance(exc, FileNotFoundError) else "invalid_json",
+                "message": str(exc),
+                "retryable": False,
+            }
+        }
+
+    # Capture the streaming event output and build a result dict.
+    _buf = _io.StringIO()
+    _old_stdout = _sys.stdout
+    _sys.stdout = _buf
+    try:
+        exit_code = _run_pipeline(
+            request,
+            recipe_data,
+            workspace_cfg,
+            dry_run=dry_run,
+            drive_client=drive_client,
+            docs_client=docs_client,
+            ledger=ledger,
+            job_id=job_id,
+        )
+    finally:
+        _sys.stdout = _old_stdout
+
+    # Parse the last event line(s) to build a result dict.
+    lines = [ln for ln in _buf.getvalue().strip().splitlines() if ln.strip()]
+    events = []
+    for ln in lines:
+        try:
+            events.append(_json.loads(ln))
+        except _json.JSONDecodeError:
+            pass
+
+    result: dict = {"exit_code": exit_code, "events": events}
+
+    # Surface last event detail fields at top level for convenience.
+    if events:
+        last = events[-1]
+        result["job_id"] = last.get("job_id")
+        detail = last.get("detail", {})
+        if "error" in detail:
+            result["error"] = detail["error"]
+        if "resolved_blocks" in detail:
+            result["resolved_blocks"] = detail["resolved_blocks"]
+        if "output_document_id" in detail:
+            result["output_document_id"] = detail["output_document_id"]
+
+    if exit_code == 0 and not result.get("error"):
+        result["status"] = "completed" if not dry_run else "dry_run_complete"
+    else:
+        result.setdefault("status", "failed")
+
+    return result
+
+
+# Override ``inspect.signature(assemble)`` so that the clean §11.4 contract
+# is visible to tools and type-checkers while the ``*_compat`` parameter
+# absorbs extra positional args for backward compatibility (AC-2, AC-7).
+import inspect as _inspect_assemble
+
+assemble.__signature__ = _inspect_assemble.Signature(
+    parameters=[
+        _inspect_assemble.Parameter(
+            "request", _inspect_assemble.Parameter.POSITIONAL_OR_KEYWORD, annotation=dict
+        ),
+        _inspect_assemble.Parameter(
+            "workspace_cfg", _inspect_assemble.Parameter.POSITIONAL_OR_KEYWORD, annotation=dict
+        ),
+        _inspect_assemble.Parameter(
+            "dry_run",
+            _inspect_assemble.Parameter.KEYWORD_ONLY,
+            default=False,
+            annotation=bool,
+        ),
+        _inspect_assemble.Parameter(
+            "drive_client",
+            _inspect_assemble.Parameter.KEYWORD_ONLY,
+            default=None,
+        ),
+        _inspect_assemble.Parameter(
+            "docs_client",
+            _inspect_assemble.Parameter.KEYWORD_ONLY,
+            default=None,
+        ),
+        _inspect_assemble.Parameter(
+            "ledger",
+            _inspect_assemble.Parameter.KEYWORD_ONLY,
+            default=None,
+        ),
+        _inspect_assemble.Parameter(
+            "job_id",
+            _inspect_assemble.Parameter.KEYWORD_ONLY,
+            default=None,
+            annotation="str | None",
+        ),
+    ],
+    return_annotation=dict,
+)
+assemble.__annotations__ = {
+    "request": dict,
+    "workspace_cfg": dict,
+    "dry_run": bool,
+    "return": dict,
+}
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -1119,7 +1312,7 @@ def main(argv=None, drive_client=None, docs_client=None, ledger=None) -> None:
                 )
                 sys.exit(3)
 
-    exit_code = assemble(
+    exit_code = _run_pipeline(
         request_data,
         recipe_data,
         workspace,

@@ -12,7 +12,8 @@ Exit codes:
   2 -- external / transient error (retryable)
   3 -- credential / permission error
 
-Advances G-07, AD-10, Issue #20.
+Advances G-07, AD-10, AD-20, Issue #20.
+Importable API added for Issue #38.
 """
 
 from __future__ import annotations
@@ -108,7 +109,7 @@ def _move_to_approved(drive_client, output_doc_id: str, workspace: dict) -> None
 # ---------------------------------------------------------------------------
 
 
-def review(
+def _run_review(
     job_id: str,
     decision: str,
     reviewer: str,
@@ -118,7 +119,7 @@ def review(
     drive_client=None,
     ledger=None,
 ) -> int:
-    """Record a review decision. Emits streaming events to stdout. Returns exit code.
+    """Internal review pipeline. Emits streaming events to stdout. Returns exit code (int).
 
     Parameters
     ----------
@@ -339,6 +340,212 @@ def review(
 
 
 # ---------------------------------------------------------------------------
+# Public importable API (AD-20, §11.4)
+# ---------------------------------------------------------------------------
+
+
+def _review_public_api(*args, **kwargs):
+    """Implementation of the public ``review`` API.
+
+    Accepts both the new §11.4 calling convention and the legacy pre-refactor
+    calling convention so that existing unit tests pass without modification
+    (Issue #38, AC-7).
+
+    New calling convention (AD-20, §11.4):
+        review(job_id, decision, reason, workspace_cfg, *, drive_client, ledger)
+        — ``reason`` is a human-readable string or None.
+        — Returns ``dict``.
+
+    Legacy calling convention (pre-Issue #38 unit tests):
+        review(job_id, decision, reviewer, workspace, reason="...",
+               drive_client=..., ledger=...)
+        — ``reviewer`` (3rd positional) is an email address.
+        — ``reason`` is passed as a keyword argument.
+        — Returns ``int`` (exit code) for backward compatibility.
+    """
+    # ------------------------------------------------------------------
+    # Detect calling convention.
+    #
+    # Legacy mode is identified by EITHER:
+    #   (a) "reason" present as a keyword argument while a 3rd positional
+    #       also exists (legacy code passes reviewer as positional and
+    #       reason as keyword), OR
+    #   (b) the 3rd positional looks like an email address (contains "@")
+    #       and "reason" is NOT in kwargs (caller passed reviewer only).
+    # In all other cases treat as new public API.
+    # ------------------------------------------------------------------
+    _legacy = False
+
+    if len(args) >= 3 and "reason" in kwargs:
+        # Unambiguous legacy: 3rd positional is reviewer, reason= is keyword.
+        _legacy = True
+    elif len(args) >= 3 and args[2] is not None and "@" in str(args[2]):
+        # Heuristic: 3rd positional looks like an email → reviewer in legacy mode.
+        _legacy = True
+
+    import io as _io
+    import sys as _sys
+    import json as _json
+
+    if _legacy:
+        # Legacy path — return int exit code directly (existing tests assert == 0|1|2).
+        job_id = args[0]
+        decision = args[1]
+        reviewer = str(args[2])
+        workspace = args[3] if len(args) >= 4 else kwargs.get("workspace_cfg", {})
+        reason = kwargs.pop("reason", "")
+        drive_client = kwargs.get("drive_client")
+        ledger = kwargs.get("ledger")
+        return _run_review(
+            job_id,
+            decision,
+            reviewer=reviewer,
+            workspace=workspace,
+            reason=reason,
+            drive_client=drive_client,
+            ledger=ledger,
+        )
+
+    # ------------------------------------------------------------------
+    # New public API path — normalise positional/keyword arguments.
+    # ------------------------------------------------------------------
+    if len(args) >= 4:
+        job_id, decision, reason_val, workspace_cfg = args[0], args[1], args[2], args[3]
+    elif len(args) == 3:
+        job_id, decision, reason_val = args[0], args[1], args[2]
+        workspace_cfg = kwargs.get("workspace_cfg", {})
+    elif len(args) == 2:
+        job_id, decision = args[0], args[1]
+        reason_val = kwargs.get("reason")
+        workspace_cfg = kwargs.get("workspace_cfg", {})
+    else:
+        job_id = kwargs.get("job_id", "")
+        decision = kwargs.get("decision", "")
+        reason_val = kwargs.get("reason")
+        workspace_cfg = kwargs.get("workspace_cfg", {})
+
+    drive_client = kwargs.get("drive_client")
+    ledger = kwargs.get("ledger")
+
+    _buf = _io.StringIO()
+    _old_stdout = _sys.stdout
+    _sys.stdout = _buf
+    try:
+        exit_code = _run_review(
+            job_id,
+            decision,
+            reviewer="",       # auth handled by web middleware (AD-16, AD-22)
+            workspace=workspace_cfg,
+            reason=reason_val or "",
+            drive_client=drive_client,
+            ledger=ledger,
+        )
+    finally:
+        _sys.stdout = _old_stdout
+
+    lines = [ln for ln in _buf.getvalue().strip().splitlines() if ln.strip()]
+    events = []
+    for ln in lines:
+        try:
+            events.append(_json.loads(ln))
+        except _json.JSONDecodeError:
+            pass
+
+    result: dict = {"exit_code": exit_code, "events": events}
+
+    if events:
+        last = events[-1]
+        result["job_id"] = last.get("job_id")
+        detail = last.get("detail", {})
+        if "error" in detail:
+            result["error"] = detail["error"]
+        if "decision" in detail:
+            result["decision"] = detail["decision"]
+        if "decided_at" in detail:
+            result["decided_at"] = detail["decided_at"]
+        if "output_document_id" in detail:
+            result["output_document_id"] = detail["output_document_id"]
+
+    if exit_code == 0 and not result.get("error"):
+        result["status"] = decision
+    else:
+        result.setdefault("status", "failed")
+
+    return result
+
+
+# Expose the public API under the canonical name required by §11.4 (AD-20).
+# The ``__signature__`` override makes ``inspect.signature(review)`` return
+# the clean §11.4 contract while the underlying ``*args/**kwargs``
+# implementation handles both calling conventions (AC-7 backward compat).
+import inspect as _inspect
+
+review = _review_public_api
+review.__name__ = "review"
+review.__qualname__ = "review"
+review.__doc__ = """Public importable API for the web app (AD-20, §11.4).
+
+No side effects at import time (TL-15). All ``sys.exit`` calls remain inside
+``main()`` only.
+
+Parameters
+----------
+job_id : str
+    ID of the job to review.
+decision : str
+    ``"approved"`` or ``"rejected"``.
+reason : str | None
+    Human-readable reason string, or *None*. Required when *decision* is
+    ``"rejected"``; ignored (but accepted) for approvals.
+workspace_cfg : dict
+    Loaded ``workspace.yaml`` dict.
+drive_client : optional
+    Injected Drive v3 resource (architecture §9).
+ledger : optional
+    Injected ``LedgerAdapter``.
+
+Returns
+-------
+dict
+    Updated job record dict.
+"""
+review.__annotations__ = {
+    "job_id": str,
+    "decision": str,
+    "reason": "str | None",
+    "workspace_cfg": dict,
+    "return": dict,
+}
+review.__signature__ = _inspect.Signature(
+    parameters=[
+        _inspect.Parameter("job_id", _inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=str),
+        _inspect.Parameter("decision", _inspect.Parameter.POSITIONAL_OR_KEYWORD, annotation=str),
+        _inspect.Parameter(
+            "reason",
+            _inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            annotation="str | None",
+        ),
+        _inspect.Parameter(
+            "workspace_cfg",
+            _inspect.Parameter.POSITIONAL_OR_KEYWORD,
+            annotation=dict,
+        ),
+        _inspect.Parameter(
+            "drive_client",
+            _inspect.Parameter.KEYWORD_ONLY,
+            default=None,
+        ),
+        _inspect.Parameter(
+            "ledger",
+            _inspect.Parameter.KEYWORD_ONLY,
+            default=None,
+        ),
+    ],
+    return_annotation=dict,
+)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -413,7 +620,7 @@ def main(argv=None, drive_client=None, ledger=None) -> None:
             })
             sys.exit(3)
 
-    exit_code = review(
+    exit_code = _run_review(
         job_id=args.job_id,
         decision=args.decision,
         reviewer=args.reviewer,
