@@ -396,3 +396,140 @@ Transient Google API errors (HTTP 429, 500, 503): exponential backoff, base 1 s,
 - AD-07 / SB-04: confirm minimum Drive + Docs + Sheets scopes for service account.
 - TL-09: confirm Sheets API concurrency / quota limits for concurrent job writes.
 - CORR-04: confirm Claude Team plan seat types and Claude Code inclusion.
+
+---
+
+## 11. Scope 2: Web UI Architecture
+
+> Extends the system with a browser-based interface and cloud hosting (AD-15–AD-25, §7 of the scope plan). All Scope 1 components are unchanged; the web app imports them as modules (AD-20).
+
+### 11.1 Additional tech stack
+
+| Component | Choice | Rationale |
+|---|---|---|
+| Web framework | FastAPI (Python 3.11+) | Async-native, automatic OpenAPI docs, same language as scripts (AD-15) |
+| Template engine | Jinja2 | Server-rendered HTML; no JS build pipeline (AD-19) |
+| Auth library | `authlib` or `httpx` + manual PKCE | Google OAuth 2.0 PKCE flow (AD-16) |
+| Session signing | `itsdangerous` | Signs cookies with `SESSION_SECRET_KEY` from Secret Manager (SB-11) |
+| CSRF | `starlette` built-in or `fastapi-csrf-protect` | Token per session, validated on every POST (SB-12) |
+| Container | Docker (python:3.11-slim base) | Required for Cloud Run deployment (AD-17) |
+| CI/CD | Google Cloud Build (`cloudbuild.yaml`) | Build → push → deploy on merge to `main` (NF-14) |
+| Secret store | Google Secret Manager | Service-account key + session key + OAuth credentials (AD-18, SB-10) |
+| AI client | `anthropic` Python SDK | Claude API for natural language → structured request (AD-25) |
+
+### 11.2 Repository additions (Scope 2)
+
+```
+web/
+├── app.py                      # FastAPI app factory (AD-15)
+├── auth.py                     # Google OAuth 2.0 PKCE flow, session management (AD-16)
+├── middleware.py               # Role enforcement, CSRF, session guard (AD-22, SB-12)
+├── claude_interpreter.py       # Claude API call: free text → request JSON (AD-25)
+├── routes/
+│   ├── jobs.py                 # GET/POST /jobs, GET /jobs/new, POST /jobs/interpret
+│   └── review.py               # GET/POST /jobs/{id}/review
+└── templates/                  # Jinja2 HTML (AD-19)
+    ├── base.html
+    ├── login.html
+    ├── dashboard.html
+    ├── submit.html
+    ├── job_detail.html
+    └── review.html
+Dockerfile                      # Non-root user, no secrets in image (SB-10, SB-15)
+cloudbuild.yaml                 # Cloud Build CI/CD (NF-14)
+config/
+└── cloud.yaml                  # Cloud Run service name, Secret Manager names — NO values
+```
+
+### 11.3 HTTP route contracts
+
+| Method | Path | Role required | Action |
+|---|---|---|---|
+| `GET` | `/login` | None | Render login page |
+| `GET` | `/auth/google` | None | Start OAuth PKCE flow |
+| `GET` | `/auth/callback` | None | Exchange code; create session cookie |
+| `GET` | `/logout` | Authenticated | Destroy session |
+| `GET` | `/health` | None | `{"status":"ok"}` — Cloud Run health check |
+| `GET` | `/jobs` | R-05, R-06, R-08 | Job dashboard (G-21) |
+| `GET` | `/jobs/new` | R-05 | Render submission form |
+| `POST` | `/jobs/interpret` | R-05 | Free text → JSON via Claude API (AD-25) |
+| `POST` | `/jobs` | R-05 | Validate + assemble → redirect to detail (G-15) |
+| `GET` | `/jobs/{id}` | R-05, R-06, R-08 | Job detail + Drive link |
+| `GET` | `/jobs/{id}/review` | R-06 | Render approve/reject form |
+| `POST` | `/jobs/{id}/review` | R-06 | Record decision + move doc (G-16) |
+
+All `POST` routes require a CSRF token (SB-12). Unauthenticated requests → 302 to `/login`.
+
+### 11.4 Module import contracts (AD-20)
+
+Scripts must expose these callable functions in addition to their CLI entry points. No side effects at import time (TL-15).
+
+| Import | Signature | Returns |
+|---|---|---|
+| `from scripts.assemble import assemble` | `assemble(request: dict, workspace_cfg: dict, dry_run: bool = False) -> dict` | Job record dict |
+| `from scripts.review import review` | `review(job_id: str, decision: str, reason: str \| None, workspace_cfg: dict) -> dict` | Updated job record |
+| `from scripts.validate_request import validate_request` | `validate_request(request: dict, recipe: dict) -> dict` | `{"valid": bool, "errors": list}` |
+| `from scripts.scan_template import scan_template` | `scan_template(file_id: str, registry: dict, docs_client) -> dict` | Scan result dict |
+
+### 11.5 Claude API integration (AD-25)
+
+```
+POST /jobs/interpret
+  body: {"text": "Contract for ABC Ltd, premium, SLA included"}
+        + CSRF token
+
+  web app builds prompt:
+    system: <SKILL.md instructions + recipe options + placeholder keys>
+    user:   <the free text>
+
+  Claude API returns:
+    {"options": {"service_tier": "premium", ...},
+     "placeholder_values": {"PARTY_NAME": "ABC Ltd", ...},
+     "unresolved": ["EFFECTIVE_DATE"]}
+
+  response: pre-filled form fields JSON
+  browser: fills form, highlights unresolved fields, user confirms
+```
+
+Claude never receives document content — only option names and placeholder keys from the recipe (SB-06, TL-10).
+
+### 11.6 Environment variables (injected by Cloud Run — never in repo)
+
+| Variable | Source | Purpose |
+|---|---|---|
+| `GOOGLE_CREDENTIALS_JSON` | Secret Manager | Service-account key JSON (replaces file path) |
+| `SESSION_SECRET_KEY` | Secret Manager | Signs session cookies (SB-11) |
+| `GOOGLE_OAUTH_CLIENT_ID` | Secret Manager | OAuth client ID (AD-16) |
+| `GOOGLE_OAUTH_CLIENT_SECRET` | Secret Manager | OAuth client secret |
+| `ANTHROPIC_API_KEY` | Secret Manager | Claude API key (AD-25, SB-02) |
+| `WORKSPACE_CONFIG_PATH` | Cloud Run env | Path to `config/workspace.yaml` in container |
+
+### 11.7 Testing strategy (Scope 2)
+
+| Tier | Scope | What changes vs Scope 1 |
+|---|---|---|
+| Unit | Route handlers, middleware, interpreter | Fake OAuth responses, fake script functions, fake Claude API client |
+| Integration | Web app + real script modules + fake Google clients | Confirms module import contracts (AD-20) |
+| Contract | HTTP routes: status codes, redirect behaviour, 403 enforcement | New `tests/contract/test_routes.py` |
+| E2E | Full browser → Cloud Run → Drive → ledger | Sandbox Cloud Run instance only (SB-05) |
+
+### 11.8 Scope 2 traceability
+
+| Component | Scope plan IDs satisfied |
+|---|---|
+| `web/app.py` | AD-15, AD-19, G-22 |
+| `web/auth.py` | AD-16, G-19, SB-11, SB-13, NF-13 |
+| `web/middleware.py` | AD-22, G-19, SB-12, SB-15 |
+| `web/routes/jobs.py` | G-15, G-21, AD-21, SB-14, NF-09 |
+| `web/routes/review.py` | G-16, G-07, AD-22, SB-16 |
+| `web/claude_interpreter.py` | AD-25, G-15, TL-10 |
+| `Dockerfile` | AD-17, SB-10, SB-15, G-22 |
+| `cloudbuild.yaml` | AD-17, NF-14, G-22 |
+| Secret Manager config | AD-18, G-18, SB-10, NF-12 |
+| Script module refactor | AD-20, G-20, TL-15 |
+
+**VERIFY items (Scope 2):**
+- TL-12: confirm current Cloud Run max request timeout (target ≥ 130 s).
+- TL-14: confirm OAuth redirect URI registration requirements.
+- Q2-04: confirm whether OAuth consent can be restricted to internal Google Workspace users.
+- Q2-06: decide streaming vs single-call for Claude API response (AD-25).

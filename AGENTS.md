@@ -17,8 +17,20 @@
 │       ├── validate_request.py           # Request + recipe validation
 │       ├── assemble.py                   # Core job runner
 │       └── review.py                     # Approve / reject output
+├── web/                                      # Scope 2: FastAPI web application (AD-15)
+│   ├── app.py                            # App factory + health endpoint
+│   ├── auth.py                           # Google OAuth 2.0 + session management (AD-16)
+│   ├── middleware.py                     # Role enforcement + CSRF (AD-22)
+│   ├── claude_interpreter.py            # Claude API: free text → request JSON (AD-25)
+│   ├── routes/
+│   │   ├── jobs.py                       # Job submission + dashboard routes
+│   │   └── review.py                     # Approve / reject routes
+│   └── templates/                        # Jinja2 HTML templates (AD-19)
+├── Dockerfile                            # Cloud Run container image (AD-17, SB-10)
+├── cloudbuild.yaml                       # Cloud Build CI/CD pipeline (NF-14)
 ├── config/
 │   ├── workspace.yaml                    # Drive IDs, folder IDs, ledger ref, workspace_id
+│   ├── cloud.yaml                        # Cloud Run service name, Secret Manager names — NO secret values
 │   ├── registry/<family_key>.json        # Block registry per document family
 │   └── recipes/<family_key>_v<N>.json    # Assembly recipe per family + version
 ├── schemas/
