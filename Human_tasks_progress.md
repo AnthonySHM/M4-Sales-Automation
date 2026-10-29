@@ -255,29 +255,12 @@ A draft recipe already exists at `config/recipes/mss_sow_v1.json` from prior wor
 
 ---
 
-## Auth setup (complete — use this on every machine)
+## Auth setup (complete)
 
-Auth uses a custom OAuth client instead of a service account key (org policy blocks key creation).
+Auth uses a custom OAuth client. Credentials file: `C:/Users/User/m4-user-credentials.json`.
+Claude Code handles this automatically — no action needed from you.
 
-```bash
-# Set this in every terminal session before running any script:
-export GOOGLE_APPLICATION_CREDENTIALS="C:/Users/User/m4-user-credentials.json"
-```
-
-If credentials expire, re-run the OAuth flow:
-```bash
-cd "C:/Users/User/Desktop/M4 Sales Automation/M4-Sales-Automation"
-source .venv/Scripts/activate
-python -c "
-import json
-from google_auth_oauthlib.flow import InstalledAppFlow
-SCOPES = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/documents','https://www.googleapis.com/auth/spreadsheets']
-flow = InstalledAppFlow.from_client_secrets_file('C:/Users/User/m4-oauth-client.json/client_secret_1049228583201-j912uf14r8io0k3lh0onqkr1cso7rb6m.apps.googleusercontent.com.json', SCOPES)
-creds = flow.run_local_server(port=0)
-import json; open('C:/Users/User/m4-user-credentials.json','w').write(json.dumps({'type':'authorized_user','client_id':creds.client_id,'client_secret':creds.client_secret,'refresh_token':creds.refresh_token}))
-print('Done')
-"
-```
+If credentials ever expire, tell Claude Code and it will regenerate them.
 
 ---
 
