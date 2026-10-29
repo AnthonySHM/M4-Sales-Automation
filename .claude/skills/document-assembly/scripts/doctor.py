@@ -94,9 +94,10 @@ def check_service_auth(creds) -> dict:
 
 
 def check_drive_api(drive_client, workspace: dict) -> dict:
-    """Verify Drive API reachable; service account is a Shared Drive member.
+    """Verify Drive API reachable and workspace root is accessible.
 
-    Uses drives().get(driveId=shared_drive_id).execute() (Architecture §7).
+    Tries drives().get() first (actual Shared Drive); falls back to
+    files().get() for organisations using a regular shared folder instead.
     """
     if drive_client is None:
         return {
@@ -118,14 +119,27 @@ def check_drive_api(drive_client, workspace: dict) -> dict:
             "status": "pass",
             "detail": f"Shared Drive accessible: {shared_drive_id}",
         }
+    except Exception:  # noqa: BLE001
+        pass
+    # Fallback: treat shared_drive_id as a regular folder ID
+    try:
+        drive_client.files().get(
+            fileId=shared_drive_id, supportsAllDrives=True
+        ).execute()
+        return {
+            "name": "drive_api",
+            "status": "pass",
+            "detail": f"Drive folder accessible: {shared_drive_id}",
+        }
     except Exception as exc:  # noqa: BLE001
         return {"name": "drive_api", "status": "fail", "detail": str(exc)}
 
 
 def check_master_template(drive_client, workspace: dict) -> dict:
-    """Verify master template is readable and its headRevisionId matches config (G-08).
+    """Verify master template is readable and its version matches config (G-08).
 
-    Uses files().get(fileId=..., fields="headRevisionId", supportsAllDrives=True).execute().
+    Uses files().get(fileId=..., fields="version", supportsAllDrives=True).execute().
+    Native Google Docs do not expose headRevisionId; version is used instead.
     """
     if drive_client is None:
         return {
@@ -135,7 +149,7 @@ def check_master_template(drive_client, workspace: dict) -> dict:
         }
     family = workspace.get("pilot_family", {})
     file_id: str = family.get("master_template_id", "")
-    approved_rev: str = family.get("approved_revision_id", "")
+    approved_rev: str = str(family.get("approved_revision_id", ""))
     if not file_id or file_id.startswith("REPLACE_"):
         return {
             "name": "master_template",
@@ -145,11 +159,11 @@ def check_master_template(drive_client, workspace: dict) -> dict:
     try:
         meta = (
             drive_client.files()
-            .get(fileId=file_id, fields="headRevisionId", supportsAllDrives=True)
+            .get(fileId=file_id, fields="version", supportsAllDrives=True)
             .execute()
         )
-        live_rev: str = meta.get("headRevisionId", "")
-        if approved_rev and live_rev != approved_rev:
+        live_rev: str = str(meta.get("version", ""))
+        if approved_rev and not approved_rev.startswith("REPLACE_") and live_rev != approved_rev:
             return {
                 "name": "master_template",
                 "status": "fail",
@@ -160,7 +174,7 @@ def check_master_template(drive_client, workspace: dict) -> dict:
         return {
             "name": "master_template",
             "status": "pass",
-            "detail": f"Master accessible; revision {live_rev!r}",
+            "detail": f"Master accessible; version {live_rev!r}",
         }
     except Exception as exc:  # noqa: BLE001
         return {"name": "master_template", "status": "fail", "detail": str(exc)}

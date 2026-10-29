@@ -57,7 +57,7 @@ class FakeDriveClient:
 
     def __init__(self, drive_result=None, file_result=None, drive_exc=None, file_exc=None):
         self._drive_result = drive_result or {"id": "fake-drive-id"}
-        self._file_result = file_result or {"headRevisionId": "rev-abc"}
+        self._file_result = file_result or {"version": "rev-abc"}
         self._drive_exc = drive_exc
         self._file_exc = file_exc
         self.drives_get_calls = []
@@ -286,7 +286,10 @@ class TestCheckDriveApi:
         assert drive.drives_get_calls[0]["driveId"] == "drive-real-001"
 
     def test_fail_when_api_raises(self):
-        drive = FakeDriveClient(drive_exc=Exception("403 forbidden"))
+        drive = FakeDriveClient(
+            drive_exc=Exception("403 forbidden"),
+            file_exc=Exception("403 forbidden"),
+        )
         result = doctor.check_drive_api(drive, WORKSPACE_CONFIGURED)
         assert result["status"] == "fail"
         assert "403" in result["detail"]
@@ -323,20 +326,20 @@ class TestCheckMasterTemplate:
         assert result["status"] == "skip"
 
     def test_pass_when_revision_matches(self):
-        drive = FakeDriveClient(file_result={"headRevisionId": "rev-abc"})
+        drive = FakeDriveClient(file_result={"version": "rev-abc"})
         result = doctor.check_master_template(drive, WORKSPACE_CONFIGURED)
         assert result["status"] == "pass"
         assert "rev-abc" in result["detail"]
 
     def test_fail_when_revision_mismatch(self):
-        drive = FakeDriveClient(file_result={"headRevisionId": "rev-XYZ"})
+        drive = FakeDriveClient(file_result={"version": "rev-XYZ"})
         result = doctor.check_master_template(drive, WORKSPACE_CONFIGURED)
         assert result["status"] == "fail"
         assert "rev-XYZ" in result["detail"]
         assert "rev-abc" in result["detail"]
 
     def test_pass_when_no_approved_revision_configured(self):
-        drive = FakeDriveClient(file_result={"headRevisionId": "rev-whatever"})
+        drive = FakeDriveClient(file_result={"version": "rev-whatever"})
         ws = {
             **WORKSPACE_CONFIGURED,
             "pilot_family": {
@@ -354,11 +357,11 @@ class TestCheckMasterTemplate:
         assert "404" in result["detail"]
 
     def test_calls_files_get_with_correct_params(self):
-        drive = FakeDriveClient(file_result={"headRevisionId": "rev-abc"})
+        drive = FakeDriveClient(file_result={"version": "rev-abc"})
         doctor.check_master_template(drive, WORKSPACE_CONFIGURED)
         call = drive.files_get_calls[0]
         assert call["fileId"] == "doc-master-001"
-        assert "headRevisionId" in call["fields"]
+        assert "version" in call["fields"]
 
 
 # ---------------------------------------------------------------------------
@@ -446,7 +449,7 @@ class TestRunChecks:
         key_file.write_text("{}")
         monkeypatch.setenv("GOOGLE_APPLICATION_CREDENTIALS", str(key_file))
         creds = FakeCreds()
-        drive = FakeDriveClient(file_result={"headRevisionId": "rev-abc"})
+        drive = FakeDriveClient(file_result={"version": "rev-abc"})
         sheets = FakeSheetsClient()
         result = doctor.run_checks(
             WORKSPACE_CONFIGURED,
