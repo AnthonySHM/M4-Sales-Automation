@@ -4,7 +4,7 @@ This file tracks progress on all human-required tasks. At the start of any new s
 
 ---
 
-## Current Status: Issue #3 complete. Issue #7 complete — scan_template.py passes (0 issues, 21 markers found). Auth uses GOOGLE_APPLICATION_CREDENTIALS=C:/Users/User/m4-user-credentials.json (custom OAuth client). Still waiting on admin for Issue #2 service account key.
+## Current Status: Issue #7 ✅ closed. Issue #9 ✅ closed. Issue #3 ⏳ reopened — blocked on Issue #2 (service account) and Issue #18 (denied-access test). Auth working via custom OAuth client: `GOOGLE_APPLICATION_CREDENTIALS=C:/Users/User/m4-user-credentials.json`. Issue #10 is now unblocked — both dependencies (#7, #9) are closed. Still waiting on admin for Issue #2 service account key.
 
 ---
 
@@ -12,11 +12,12 @@ This file tracks progress on all human-required tasks. At the start of any new s
 
 | Issue | Phase | Title | Status |
 |---|---|---|---|
-| #2 | P0 | Create Google Cloud project and service account | ❌ Blocked |
-| #3 | P0 | Provision Shared Drive and folder structure | ✅ Complete |
+| #2 | P0 | Create Google Cloud project and service account | ❌ Blocked (key creation blocked by org policy) |
+| #3 | P0 | Provision Shared Drive and folder structure | ⏳ Blocked on #2 (service account ACs) and #18 (denied-access test) |
 | #4 | P0 | Confirm Claude Team plan seats include Claude Code | ✅ Closed |
-| #7 | P1 | Decompose pilot contract family into master template | ✅ Complete |
-| #10 | P2 | Author assembly recipe for pilot family | ⏳ Waiting on #7, #9 |
+| #7 | P1 | Decompose pilot contract family into master template | ✅ Closed |
+| #9 | P1 | Block registry JSON for pilot family | ✅ Closed (automated — 21 blocks, all ACs pass) |
+| #10 | P2 | Author assembly recipe for pilot family | ✅ Unblocked — ready to start |
 | #17 | P4 | Second teammate onboarding test | ⏳ Waiting on #16 |
 | #19 | P5 | Pilot measurement: manual vs automated time | ⏳ Waiting on #17 |
 | #33 | P6 | Set up Google Cloud infrastructure (web UI) | ⏳ Waiting on #2 |
@@ -32,6 +33,8 @@ This file tracks progress on all human-required tasks. At the start of any new s
 | Identify existing project | ✅ Done | Project: **Sales Automation** · Project ID: `second-modem-500910-d1` |
 | Enable APIs | ✅ Done | Google Drive API, Google Docs API, Google Sheets API — all enabled |
 | Create service account | ✅ Done | Name: `m4-document-assembly` · Project: `second-modem-500910-d1` |
+| Install Google Cloud CLI | ✅ Done | Installed and configured, project `second-modem-500910-d1` selected |
+| Set up user auth (Option B) | ✅ Done | Custom OAuth client created (`m4-oauth-client.json`), credentials at `C:/Users/User/m4-user-credentials.json` |
 | Download JSON key | ❌ Blocked | Org policy blocks service account key creation |
 | Distribute key to team | ⏳ Pending step above | |
 
@@ -53,7 +56,7 @@ The organisation has a policy that prevents service account key creation. An ema
 
 ## Issue #3 — Provision Shared Drive and folder structure
 
-**Status: ✅ COMPLETE**
+**Status: ⏳ OPEN — blocked on Issue #2 (service account ACs) and Issue #18 (denied-access test)**
 
 Using `Mantix4-Sales > M4 Document Assembly` folder in the organisation Google Drive (Option B — gcloud auth, no service account key required for pilot CLI).
 
@@ -174,7 +177,9 @@ Only the developer needs Claude Pro. Teammates running jobs need only Python and
 
 ## Issue #10 — Author assembly recipe for pilot family
 
-**Waiting on:** Issue #7 (master template complete) + Issue #9 (block registry JSON — automated task)
+**✅ Unblocked — Issue #7 and Issue #9 are both closed. Ready to start.**
+
+A draft recipe already exists at `config/recipes/mss_sow_v1.json` from prior work — review and complete it.
 
 | Step | Status | Detail |
 |---|---|---|
@@ -186,8 +191,8 @@ Only the developer needs Claude Pro. Teammates running jobs need only Python and
 | Run validate_request.py against all golden-set profiles | ⏳ Not started | All exit 0 |
 | Run pytest tests/contract/ -v | ⏳ Not started | All pass |
 
-### File to create
-`config/recipes/<family_key>_v1.json` — replace `<family_key>` with the value from Issue #7.
+### File to complete
+`config/recipes/mss_sow_v1.json` — draft exists, needs review and completion.
 
 ---
 
@@ -250,36 +255,36 @@ Only the developer needs Claude Pro. Teammates running jobs need only Python and
 
 ---
 
-## What you can do right now (while waiting on admin)
+## Auth setup (complete — use this on every machine)
 
-These steps require no Google infrastructure and can be completed immediately:
+Auth uses a custom OAuth client instead of a service account key (org policy blocks key creation).
 
-1. **Resolve Q-01** — decide which contract type is the pilot family. Post the answer as a comment on Issue #7.
-2. **Analyse the pilot contract** — go through it and identify every optional section (future blocks) and every variable field (future placeholders).
-3. **Draft block IDs and placeholder names** — assign names following the format rules above.
-4. **Draft the block registry JSON** (Issue #9 prep) — list all blocks with IDs, labels, kinds, and statuses.
-5. **Draft the recipe JSON** (Issue #10 prep) — map customer options to block include/exclude lists.
+```bash
+# Set this in every terminal session before running any script:
+export GOOGLE_APPLICATION_CREDENTIALS="C:/Users/User/m4-user-credentials.json"
+```
+
+If credentials expire, re-run the OAuth flow:
+```bash
+cd "C:/Users/User/Desktop/M4 Sales Automation/M4-Sales-Automation"
+source .venv/Scripts/activate
+python -c "
+import json
+from google_auth_oauthlib.flow import InstalledAppFlow
+SCOPES = ['https://www.googleapis.com/auth/drive','https://www.googleapis.com/auth/documents','https://www.googleapis.com/auth/spreadsheets']
+flow = InstalledAppFlow.from_client_secrets_file('C:/Users/User/m4-oauth-client.json/client_secret_1049228583201-j912uf14r8io0k3lh0onqkr1cso7rb6m.apps.googleusercontent.com.json', SCOPES)
+creds = flow.run_local_server(port=0)
+import json; open('C:/Users/User/m4-user-credentials.json','w').write(json.dumps({'type':'authorized_user','client_id':creds.client_id,'client_secret':creds.client_secret,'refresh_token':creds.refresh_token}))
+print('Done')
+"
+```
 
 ---
 
 ## Next action (resume here)
 
-**Issue #3 is complete.** Folder structure and all IDs are committed.
+**Issue #10 is unblocked.** Both dependencies (#7 master template, #9 block registry) are closed.
 
-**Immediate next step — set up gcloud auth (Option B):**
+**Your next human task:** Complete the assembly recipe at `config/recipes/mss_sow_v1.json`. A draft already exists — review it, fill in the option → block mappings, and post Q-02 resolution as a comment on Issue #10.
 
-Run this once on each machine that will run jobs (no service account key needed):
-```bash
-gcloud auth application-default login
-```
-This opens a browser, you sign in with your Google account, and credentials are stored locally. No admin required.
-
-**After gcloud auth is set up → run scan_template.py:**
-```bash
-python .claude/skills/document-assembly/scripts/scan_template.py \
-  --file-id 1KdmVNOjEGI3y-16Xx3XLU5SwnXgbuNfUyKSKoF35j9w \
-  --registry config/registry/mss_sow.json
-```
-This validates the Google Doc markers and placeholders. Must exit 0 before Issue #7 can close.
-
-**Still waiting:** Google Workspace admin response for Issue #2 (service account key). If admin refuses → Option B above is already the chosen fallback.
+**Still waiting on admin:** Issue #2 service account key (org policy blocker). Issues #3 and #18 remain open until resolved.
