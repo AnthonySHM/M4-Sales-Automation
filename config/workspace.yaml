@@ -1,24 +1,24 @@
 # Workspace configuration
-# Replace placeholder values with real IDs after provisioning the Shared Drive (Issue #3).
 # NEVER commit real credentials or key file paths here.
+# Drive folder: Mantix4-Sales > M4 Document Assembly (provisioned Issue #3)
 
 workspace_id: "workspace-pilot"
-shared_drive_id: "REPLACE_WITH_SHARED_DRIVE_ID"
+shared_drive_id: "1TOI0xeXN__be3Mb7jB2QCsPWur_9nQWG"
 
 folders:
-  masters: "REPLACE_WITH_MASTERS_FOLDER_ID"
-  review: "REPLACE_WITH_REVIEW_FOLDER_ID"
-  approved: "REPLACE_WITH_APPROVED_FOLDER_ID"
-  quarantine: "REPLACE_WITH_QUARANTINE_FOLDER_ID"
+  masters: "1IH_e6zz_n4RiSQw3YspIYRvjrogbc0jX"
+  review: "1cjMRpgw3q0qrAmuMCn9CbAqeSwIkVodd"
+  approved: "1uH2N9g0Q2kzfwYFN6hJhPtQgUm0438v7"
+  quarantine: "1avRkalemhYLBU7tF1WtARSdNtPzyhnVP"
 
 ledger:
-  spreadsheet_id: "REPLACE_WITH_LEDGER_SHEET_ID"
+  spreadsheet_id: "1CjSkWyKtvWM-OW_9X1vubbC857P_SDvLUFheeP2XcwA"
   jobs_tab: "jobs"
   events_tab: "events"
 
 pilot_family:
-  key: "family_a"
-  master_template_id: "REPLACE_WITH_MASTER_DOC_ID"
+  key: "mss_sow"
+  master_template_id: "1KdmVNOjEGI3y-16Xx3XLU5SwnXgbuNfUyKSKoF35j9w"
   approved_revision_id: "REPLACE_WITH_APPROVED_REVISION_ID"
   active_recipe_version: 1
 

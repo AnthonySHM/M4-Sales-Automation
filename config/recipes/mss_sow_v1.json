@@ -57,23 +57,23 @@
     },
     {
       "when": {"tier": "elite"},
-      "include": ["service_desc_elite", "mdr_ndr_led", "bench_ndr", "bench_cloud_identity", "isensor", "fees_table_elite"],
-      "exclude": ["service_desc_enterprise", "service_desc_premium", "service_desc_strategic", "mdr_cloud_led", "mdr_enterprise", "fees_table_enterprise", "fees_table_premium", "fees_table_strategic"]
+      "include": ["service_desc_elite", "mdr_elite", "bench_ndr", "bench_cloud_identity", "isensor", "fees_table_elite"],
+      "exclude": ["service_desc_enterprise", "service_desc_premium", "service_desc_strategic", "mdr_premium", "mdr_strategic", "fees_table_enterprise", "fees_table_premium", "fees_table_strategic"]
     },
     {
       "when": {"tier": "enterprise"},
-      "include": ["service_desc_enterprise", "mdr_enterprise", "bench_ndr", "bench_cloud_identity", "isensor", "fees_table_enterprise"],
-      "exclude": ["service_desc_elite", "service_desc_premium", "service_desc_strategic", "mdr_ndr_led", "mdr_cloud_led", "fees_table_elite", "fees_table_premium", "fees_table_strategic"]
+      "include": ["service_desc_enterprise", "bench_ndr", "bench_cloud_identity", "isensor", "fees_table_enterprise"],
+      "exclude": ["service_desc_elite", "service_desc_premium", "service_desc_strategic", "mdr_elite", "mdr_premium", "mdr_strategic", "fees_table_elite", "fees_table_premium", "fees_table_strategic"]
     },
     {
       "when": {"tier": "premium"},
-      "include": ["service_desc_premium", "mdr_ndr_led", "bench_ndr", "isensor", "fees_table_premium"],
-      "exclude": ["service_desc_elite", "service_desc_enterprise", "service_desc_strategic", "mdr_cloud_led", "mdr_enterprise", "bench_cloud_identity", "fees_table_elite", "fees_table_enterprise", "fees_table_strategic"]
+      "include": ["service_desc_premium", "mdr_premium", "bench_ndr", "isensor", "fees_table_premium"],
+      "exclude": ["service_desc_elite", "service_desc_enterprise", "service_desc_strategic", "mdr_elite", "mdr_strategic", "bench_cloud_identity", "fees_table_elite", "fees_table_enterprise", "fees_table_strategic"]
     },
     {
       "when": {"tier": "strategic"},
-      "include": ["service_desc_strategic", "mdr_cloud_led", "bench_cloud_identity", "fees_table_strategic"],
-      "exclude": ["service_desc_elite", "service_desc_enterprise", "service_desc_premium", "mdr_ndr_led", "mdr_enterprise", "bench_ndr", "isensor", "fees_table_elite", "fees_table_enterprise", "fees_table_premium"]
+      "include": ["service_desc_strategic", "mdr_strategic", "bench_cloud_identity", "fees_table_strategic"],
+      "exclude": ["service_desc_elite", "service_desc_enterprise", "service_desc_premium", "mdr_elite", "mdr_premium", "bench_ndr", "isensor", "fees_table_elite", "fees_table_enterprise", "fees_table_premium"]
     },
     {
       "when": {"addon_siem": "yes"},
@@ -150,6 +150,7 @@
     "REVISION_NUMBER": "placeholder_values.revision_number",
     "MSA_DATE": "placeholder_values.msa_date",
     "ORDER_START_DATE": "placeholder_values.order_start_date",
+    "SERVICE_TIER_FULL_NAME": "placeholder_values.service_tier_full_name",
     "HOT_STORAGE_MONTHS": "placeholder_values.hot_storage_months",
     "COLD_STORAGE_MONTHS": "placeholder_values.cold_storage_months",
     "POC_FEE_MONTHLY": "placeholder_values.poc_fee_monthly",
