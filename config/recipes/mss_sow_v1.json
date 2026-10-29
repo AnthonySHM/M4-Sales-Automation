@@ -1,0 +1,160 @@
+{
+  "family_key": "mss_sow",
+  "version": 1,
+  "status": "draft",
+  "options": [
+    {
+      "option_key": "tier",
+      "allowed_values": ["elite", "enterprise", "premium", "strategic"],
+      "required": true
+    },
+    {
+      "option_key": "channel",
+      "allowed_values": ["resell", "refer"],
+      "required": true
+    },
+    {
+      "option_key": "addon_siem",
+      "allowed_values": ["yes", "no"],
+      "required": true
+    },
+    {
+      "option_key": "addon_firewall",
+      "allowed_values": ["yes", "no"],
+      "required": true
+    },
+    {
+      "option_key": "addon_storage",
+      "allowed_values": ["yes", "no"],
+      "required": true
+    },
+    {
+      "option_key": "addon_endpoint_patching",
+      "allowed_values": ["yes", "no"],
+      "required": true
+    },
+    {
+      "option_key": "addon_sentinelone",
+      "allowed_values": ["yes", "no"],
+      "required": true
+    },
+    {
+      "option_key": "include_slo",
+      "allowed_values": ["yes", "no"],
+      "required": true
+    }
+  ],
+  "rules": [
+    {
+      "when": {"channel": "resell"},
+      "include": ["partner_logo"],
+      "exclude": []
+    },
+    {
+      "when": {"channel": "refer"},
+      "include": [],
+      "exclude": ["partner_logo"]
+    },
+    {
+      "when": {"tier": "elite"},
+      "include": ["service_desc_elite", "mdr_ndr_led", "bench_ndr", "bench_cloud_identity", "isensor", "fees_table_elite"],
+      "exclude": ["service_desc_enterprise", "service_desc_premium", "service_desc_strategic", "mdr_cloud_led", "mdr_enterprise", "fees_table_enterprise", "fees_table_premium", "fees_table_strategic"]
+    },
+    {
+      "when": {"tier": "enterprise"},
+      "include": ["service_desc_enterprise", "mdr_enterprise", "bench_ndr", "bench_cloud_identity", "isensor", "fees_table_enterprise"],
+      "exclude": ["service_desc_elite", "service_desc_premium", "service_desc_strategic", "mdr_ndr_led", "mdr_cloud_led", "fees_table_elite", "fees_table_premium", "fees_table_strategic"]
+    },
+    {
+      "when": {"tier": "premium"},
+      "include": ["service_desc_premium", "mdr_ndr_led", "bench_ndr", "isensor", "fees_table_premium"],
+      "exclude": ["service_desc_elite", "service_desc_enterprise", "service_desc_strategic", "mdr_cloud_led", "mdr_enterprise", "bench_cloud_identity", "fees_table_elite", "fees_table_enterprise", "fees_table_strategic"]
+    },
+    {
+      "when": {"tier": "strategic"},
+      "include": ["service_desc_strategic", "mdr_cloud_led", "bench_cloud_identity", "fees_table_strategic"],
+      "exclude": ["service_desc_elite", "service_desc_enterprise", "service_desc_premium", "mdr_ndr_led", "mdr_enterprise", "bench_ndr", "isensor", "fees_table_elite", "fees_table_enterprise", "fees_table_premium"]
+    },
+    {
+      "when": {"addon_siem": "yes"},
+      "include": ["addon_siem"],
+      "exclude": []
+    },
+    {
+      "when": {"addon_siem": "no"},
+      "include": [],
+      "exclude": ["addon_siem"]
+    },
+    {
+      "when": {"addon_firewall": "yes"},
+      "include": ["addon_firewall_compliance"],
+      "exclude": []
+    },
+    {
+      "when": {"addon_firewall": "no"},
+      "include": [],
+      "exclude": ["addon_firewall_compliance"]
+    },
+    {
+      "when": {"addon_storage": "yes"},
+      "include": ["addon_storage"],
+      "exclude": []
+    },
+    {
+      "when": {"addon_storage": "no"},
+      "include": [],
+      "exclude": ["addon_storage"]
+    },
+    {
+      "when": {"addon_endpoint_patching": "yes"},
+      "include": ["addon_endpoint_patching"],
+      "exclude": []
+    },
+    {
+      "when": {"addon_endpoint_patching": "no"},
+      "include": [],
+      "exclude": ["addon_endpoint_patching"]
+    },
+    {
+      "when": {"addon_sentinelone": "yes"},
+      "include": ["addon_sentinelone"],
+      "exclude": []
+    },
+    {
+      "when": {"addon_sentinelone": "no"},
+      "include": [],
+      "exclude": ["addon_sentinelone"]
+    },
+    {
+      "when": {"include_slo": "yes"},
+      "include": ["slo_section"],
+      "exclude": []
+    },
+    {
+      "when": {"include_slo": "no"},
+      "include": [],
+      "exclude": ["slo_section"]
+    }
+  ],
+  "defaults": {
+    "include": []
+  },
+  "placeholder_map": {
+    "CUSTOMER_NAME": "placeholder_values.customer_name",
+    "CUSTOMER_LOGO": "placeholder_values.customer_logo",
+    "CUSTOMER_CONTACT_NAME": "placeholder_values.customer_contact_name",
+    "CUSTOMER_CONTACT_TITLE": "placeholder_values.customer_contact_title",
+    "ACCOUNT_MANAGER_NAME": "placeholder_values.account_manager_name",
+    "SOW_DATE": "placeholder_values.sow_date",
+    "QUOTE_NUMBER": "placeholder_values.quote_number",
+    "REVISION_NUMBER": "placeholder_values.revision_number",
+    "MSA_DATE": "placeholder_values.msa_date",
+    "ORDER_START_DATE": "placeholder_values.order_start_date",
+    "HOT_STORAGE_MONTHS": "placeholder_values.hot_storage_months",
+    "COLD_STORAGE_MONTHS": "placeholder_values.cold_storage_months",
+    "POC_FEE_MONTHLY": "placeholder_values.poc_fee_monthly",
+    "TERM_FEE_MONTHLY": "placeholder_values.term_fee_monthly",
+    "REMAINDER_FEE_MONTHLY": "placeholder_values.remainder_fee_monthly",
+    "MIN_ENDPOINT_COUNT": "placeholder_values.min_endpoint_count"
+  }
+}

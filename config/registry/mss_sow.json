@@ -1,0 +1,194 @@
+{
+  "family_key": "mss_sow",
+  "blocks": [
+    {
+      "block_id": "partner_logo",
+      "label": "Partner Logo (cover page)",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Cover page — Resell channel only",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "service_desc_elite",
+      "label": "Service Description — Integrated MDR Elite",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Services and Fees > Mantix4 Integrated MDR Elite (POC)",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "service_desc_enterprise",
+      "label": "Service Description — Enterprise (MDR Enhancement)",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Services and Fees > Mantix4 Enterprise (MDR Enhancement) (POC)",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "service_desc_premium",
+      "label": "Service Description — Integrated MDR Premium",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Services and Fees > Mantix4 Integrated MDR Premium (POC)",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "service_desc_strategic",
+      "label": "Service Description — Integrated MDR Strategic (Stratus)",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Services and Fees > Mantix4 Integrated MDR Stratus (POC)",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "mdr_ndr_led",
+      "label": "MDR Section — NDR-led (Elite and Premium)",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Mantix4 Managed Detection and Response (MDR) — leads with NDR",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "mdr_cloud_led",
+      "label": "MDR Section — Cloud-led (Strategic)",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Mantix4 Managed Detection and Response (MDR) — leads with Cloud Services",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "mdr_enterprise",
+      "label": "MDR Section — Enterprise (existing SIEM/SOC)",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "M4 SecurityBox section for Enterprise tier",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "bench_ndr",
+      "label": "Analyst Bench — Network Detection and Response (NDR)",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "M4 SecurityBox Analyst Bench > Network Detection and Response (NDR)",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "bench_cloud_identity",
+      "label": "Analyst Bench — Cloud and Identity",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "M4 SecurityBox Analyst Bench > Cloud and Identity",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "isensor",
+      "label": "NDR iSensor (Hardware/Virtual)",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Data Storage and Onboarding > M4 SecurityBox / NDR iSensor(s)",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "addon_siem",
+      "label": "Add-on — SIEM Service",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Mantix4 Security Information and Event Management (SIEM) Service",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "addon_firewall_compliance",
+      "label": "Add-on — Firewall Rule Compliance Monitoring Module",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Mantix4 Firewall Rule Compliance Monitoring Module",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "addon_storage",
+      "label": "Add-on — Additional Data Storage Service (Compliance)",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Mantix4 Additional Data Storage Service (Compliance)",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "addon_endpoint_patching",
+      "label": "Add-on — SecurityBox Endpoint Patching Assessment",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Mantix4 SecurityBox Add-on - Endpoint Patching Assessment",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "addon_sentinelone",
+      "label": "Add-on — SentinelOne Singularity XDR Licensing",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Third Party Licensing Services and Fees > SentinelOne Singularity XDR Licensing",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "fees_table_elite",
+      "label": "Pricing Table — Elite (SKU M4ELIT1002)",
+      "kind": "table",
+      "optional": true,
+      "source_ref": "Services and Fees > fee tables — Elite line items",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "fees_table_enterprise",
+      "label": "Pricing Table — Enterprise (SKU M4ENTN1001)",
+      "kind": "table",
+      "optional": true,
+      "source_ref": "Services and Fees > fee tables — Enterprise line items",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "fees_table_premium",
+      "label": "Pricing Table — Premium",
+      "kind": "table",
+      "optional": true,
+      "source_ref": "Services and Fees > fee tables — Premium line items",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "fees_table_strategic",
+      "label": "Pricing Table — Strategic (Stratus)",
+      "kind": "table",
+      "optional": true,
+      "source_ref": "Services and Fees > fee tables — Strategic line items",
+      "owner": "sales",
+      "status": "active"
+    },
+    {
+      "block_id": "slo_section",
+      "label": "Service Level Objectives (SLO) Table",
+      "kind": "section",
+      "optional": true,
+      "source_ref": "Mantix4 Service Level Objectives (SLO) — present in v3 templates",
+      "owner": "sales",
+      "status": "active"
+    }
+  ]
+}
