@@ -4,7 +4,7 @@ This file tracks progress on all human-required tasks. At the start of any new s
 
 ---
 
-## Current Status: Waiting on admin email response (Issue #2 blocker)
+## Current Status: Issue #3 complete. Issue #7 in progress — markers in Google Doc, scan_template.py pending (needs gcloud auth). Still waiting on admin for Issue #2 service account key.
 
 ---
 
@@ -13,7 +13,7 @@ This file tracks progress on all human-required tasks. At the start of any new s
 | Issue | Phase | Title | Status |
 |---|---|---|---|
 | #2 | P0 | Create Google Cloud project and service account | ❌ Blocked |
-| #3 | P0 | Provision Shared Drive and folder structure | ⏳ Waiting on #2 |
+| #3 | P0 | Provision Shared Drive and folder structure | ✅ Complete |
 | #4 | P0 | Confirm Claude Team plan seats include Claude Code | ✅ Closed |
 | #7 | P1 | Decompose pilot contract family into master template | ⏳ Waiting on #3 |
 | #10 | P2 | Author assembly recipe for pilot family | ⏳ Waiting on #7, #9 |
@@ -53,27 +53,28 @@ The organisation has a policy that prevents service account key creation. An ema
 
 ## Issue #3 — Provision Shared Drive and folder structure
 
-**Waiting on:** Issue #2
+**Status: ✅ COMPLETE**
+
+Using `Mantix4-Sales > M4 Document Assembly` folder in the organisation Google Drive (Option B — gcloud auth, no service account key required for pilot CLI).
 
 | Step | Status | Detail |
 |---|---|---|
-| Create Shared Drive | ⏳ Not started | |
-| Create folders: masters/, review/, approved/, quarantine/ | ⏳ Not started | |
-| Grant service account access to Shared Drive | ⏳ Not started | |
-| Create ledger Google Sheet on Shared Drive | ⏳ Not started | |
-| Fill IDs into config/workspace.yaml | ⏳ Not started | |
+| Create Shared Drive | ✅ Done | Regular Google Drive folder: `M4 Document Assembly` inside `Mantix4-Sales` |
+| Create folders: masters/, review/, approved/, quarantine/ | ✅ Done | All four subfolders created |
+| Grant service account access to Shared Drive | ➡️ N/A for pilot | Using Option B (gcloud auth application-default login) instead |
+| Create ledger Google Sheet on Shared Drive | ✅ Done | Sheet created in `M4 Document Assembly` |
+| Fill IDs into config/workspace.yaml | ✅ Done | All 6 IDs committed to main |
 
-### What is needed to mark this complete
-Fill the following into `config/workspace.yaml`:
+### IDs now in config/workspace.yaml
 
-| Field | Value needed |
+| Field | ID |
 |---|---|
-| `shared_drive_id` | ID of the Shared Drive |
-| `folders.masters` | Folder ID |
-| `folders.review` | Folder ID |
-| `folders.approved` | Folder ID |
-| `folders.quarantine` | Folder ID |
-| `ledger.spreadsheet_id` | Google Sheet ID |
+| `shared_drive_id` | `1TOI0xeXN__be3Mb7jB2QCsPWur_9nQWG` |
+| `folders.masters` | `1IH_e6zz_n4RiSQw3YspIYRvjrogbc0jX` |
+| `folders.review` | `1cjMRpgw3q0qrAmuMCn9CbAqeSwIkVodd` |
+| `folders.approved` | `1uH2N9g0Q2kzfwYFN6hJhPtQgUm0438v7` |
+| `folders.quarantine` | `1avRkalemhYLBU7tF1WtARSdNtPzyhnVP` |
+| `ledger.spreadsheet_id` | `1CjSkWyKtvWM-OW_9X1vubbC857P_SDvLUFheeP2XcwA` |
 
 ---
 
@@ -96,11 +97,11 @@ Only the developer needs Claude Pro. Teammates running jobs need only Python and
 | Analyse contract — mark variable fields | ✅ Done | 16 placeholders identified (see placeholder list below) |
 | Assign block_ids to all optional sections | ✅ Done | See `config/registry/mss_sow.json` |
 | Assign PLACEHOLDER_KEY names to all variable fields | ✅ Done | See `config/recipes/mss_sow_v1.json` placeholder_map |
-| Create master Google Doc in masters/ folder | ⏳ Not started | Waiting on Issue #3 |
-| Add [[BLOCK:id]] / [[/BLOCK:id]] markers to doc | ⏳ Not started | Use block list below as the guide |
-| Add {{PLACEHOLDER_KEY}} tokens to doc | ⏳ Not started | Body only — not in headers, footers, or footnotes |
-| Run scan_template.py — confirm 0 issues | ⏳ Not started | `python .claude/skills/document-assembly/scripts/scan_template.py --file-id <id>` |
-| Update config/workspace.yaml pilot_family section | ⏳ Not started | Set `pilot_family.master_template_id` and `pilot_family.key` via PR |
+| Create master Google Doc in masters/ folder | ✅ Done | Google Doc ID: `1KdmVNOjEGI3y-16Xx3XLU5SwnXgbuNfUyKSKoF35j9w` |
+| Add [[BLOCK:id]] / [[/BLOCK:id]] markers to doc | ✅ Done | Added via `scripts/build_master_template.py`, converted from Word to Google Doc |
+| Add {{PLACEHOLDER_KEY}} tokens to doc | ✅ Done | All 16 placeholders present in body (not headers/footers) |
+| Run scan_template.py — confirm 0 issues | ⏳ Not started | Needs gcloud auth setup first — `python .claude/skills/document-assembly/scripts/scan_template.py --file-id 1KdmVNOjEGI3y-16Xx3XLU5SwnXgbuNfUyKSKoF35j9w` |
+| Update config/workspace.yaml pilot_family section | ✅ Done | `master_template_id` and `key` committed to main |
 
 ### Q-01 Resolution
 - **Pilot family:** MSS SOW (Managed Security Services Statement of Work)
@@ -263,10 +264,22 @@ These steps require no Google infrastructure and can be completed immediately:
 
 ## Next action (resume here)
 
-**Waiting for:** Google Workspace admin to respond to the email about the service account key exemption.
+**Issue #3 is complete.** Folder structure and all IDs are committed.
 
-**When admin responds:**
-- Exemption granted → download JSON key → complete Issue #2 → move to Issue #3
-- Admin refuses → choose Option B (`gcloud auth application-default login`) or Option C (personal Gmail project) → update this file with the chosen path
+**Immediate next step — set up gcloud auth (Option B):**
 
-**After Issue #2 resolved → Issue #3:** Create the Shared Drive and four folders.
+Run this once on each machine that will run jobs (no service account key needed):
+```bash
+gcloud auth application-default login
+```
+This opens a browser, you sign in with your Google account, and credentials are stored locally. No admin required.
+
+**After gcloud auth is set up → run scan_template.py:**
+```bash
+python .claude/skills/document-assembly/scripts/scan_template.py \
+  --file-id 1KdmVNOjEGI3y-16Xx3XLU5SwnXgbuNfUyKSKoF35j9w \
+  --registry config/registry/mss_sow.json
+```
+This validates the Google Doc markers and placeholders. Must exit 0 before Issue #7 can close.
+
+**Still waiting:** Google Workspace admin response for Issue #2 (service account key). If admin refuses → Option B above is already the chosen fallback.
