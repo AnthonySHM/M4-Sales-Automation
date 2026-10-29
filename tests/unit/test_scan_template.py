@@ -129,9 +129,9 @@ def _make_balanced_doc(n):
     texts = []
     for i in range(n):
         bid = "blk_{:03d}".format(i)  # blk_000 .. blk_059 — matches ^[a-z0-9_]{3,64}$
-        texts.append("{{BEGIN:" + bid + "}}\n")
+        texts.append("[[BLOCK:" + bid + "]]\n")
         texts.append("Body of block {}\n".format(i))
-        texts.append("{{END:" + bid + "}}\n")
+        texts.append("[[/BLOCK:" + bid + "]]\n")
     return _make_doc(*texts)
 
 
@@ -246,25 +246,25 @@ class TestHappyPath:
 
 class TestUnbalancedMarkers:
     def test_begin_without_end(self):
-        doc = _make_doc("{{BEGIN:intro}}\nSome text\n")
+        doc = _make_doc("[[BLOCK:intro]]\nSome text\n")
         result = scan(FakeDocsClient(doc), "fid")
         assert any(m["block_id"] == "intro" for m in result["issues"]["unbalanced_markers"])
         assert result["summary"]["issue_count"] > 0
 
     def test_end_without_begin(self):
-        doc = _make_doc("Some text\n{{END:intro}}\n")
+        doc = _make_doc("Some text\n[[/BLOCK:intro]]\n")
         result = scan(FakeDocsClient(doc), "fid")
         assert any(m["block_id"] == "intro" for m in result["issues"]["unbalanced_markers"])
         assert result["summary"]["issue_count"] > 0
 
     def test_exit_one_when_unbalanced(self):
-        doc = _make_doc("{{BEGIN:intro}}\n")
+        doc = _make_doc("[[BLOCK:intro]]\n")
         with pytest.raises(SystemExit) as exc_info:
             main(["--file-id", "fid"], docs_client=FakeDocsClient(doc))
         assert exc_info.value.code == 1
 
     def test_balanced_pair_not_flagged(self):
-        doc = _make_doc("{{BEGIN:intro}}\ntext\n{{END:intro}}\n")
+        doc = _make_doc("[[BLOCK:intro]]\ntext\n[[/BLOCK:intro]]\n")
         result = scan(FakeDocsClient(doc), "fid")
         assert result["issues"]["unbalanced_markers"] == []
 
@@ -277,8 +277,8 @@ class TestUnbalancedMarkers:
 class TestDuplicateIds:
     def test_duplicate_begin_detected(self):
         doc = _make_doc(
-            "{{BEGIN:intro}}\ntext\n{{END:intro}}\n",
-            "{{BEGIN:intro}}\ntext2\n{{END:intro}}\n",
+            "[[BLOCK:intro]]\ntext\n[[/BLOCK:intro]]\n",
+            "[[BLOCK:intro]]\ntext2\n[[/BLOCK:intro]]\n",
         )
         result = scan(FakeDocsClient(doc), "fid")
         assert "intro" in result["issues"]["duplicate_ids"]
@@ -286,8 +286,8 @@ class TestDuplicateIds:
 
     def test_exit_one_on_duplicate(self):
         doc = _make_doc(
-            "{{BEGIN:foo}}\nA\n{{END:foo}}\n",
-            "{{BEGIN:foo}}\nB\n{{END:foo}}\n",
+            "[[BLOCK:foo]]\nA\n[[/BLOCK:foo]]\n",
+            "[[BLOCK:foo]]\nB\n[[/BLOCK:foo]]\n",
         )
         with pytest.raises(SystemExit) as exc_info:
             main(["--file-id", "fid"], docs_client=FakeDocsClient(doc))
@@ -295,8 +295,8 @@ class TestDuplicateIds:
 
     def test_unique_ids_not_flagged(self):
         doc = _make_doc(
-            "{{BEGIN:aaa}}\ntext\n{{END:aaa}}\n",
-            "{{BEGIN:bbb}}\ntext\n{{END:bbb}}\n",
+            "[[BLOCK:aaa]]\ntext\n[[/BLOCK:aaa]]\n",
+            "[[BLOCK:bbb]]\ntext\n[[/BLOCK:bbb]]\n",
         )
         result = scan(FakeDocsClient(doc), "fid")
         assert result["issues"]["duplicate_ids"] == []
@@ -310,10 +310,10 @@ class TestDuplicateIds:
 class TestNestedMarkers:
     def test_nested_detected(self):
         doc = _make_doc(
-            "{{BEGIN:outer}}\n",
-            "{{BEGIN:inner}}\n",
-            "{{END:inner}}\n",
-            "{{END:outer}}\n",
+            "[[BLOCK:outer]]\n",
+            "[[BLOCK:inner]]\n",
+            "[[/BLOCK:inner]]\n",
+            "[[/BLOCK:outer]]\n",
         )
         result = scan(FakeDocsClient(doc), "fid")
         nested = result["issues"]["nested_markers"]
@@ -324,15 +324,15 @@ class TestNestedMarkers:
 
     def test_sequential_blocks_not_nested(self):
         doc = _make_doc(
-            "{{BEGIN:aaa}}\ntext\n{{END:aaa}}\n",
-            "{{BEGIN:bbb}}\ntext\n{{END:bbb}}\n",
+            "[[BLOCK:aaa]]\ntext\n[[/BLOCK:aaa]]\n",
+            "[[BLOCK:bbb]]\ntext\n[[/BLOCK:bbb]]\n",
         )
         result = scan(FakeDocsClient(doc), "fid")
         assert result["issues"]["nested_markers"] == []
 
     def test_exit_one_on_nested(self):
         doc = _make_doc(
-            "{{BEGIN:outer}}\n{{BEGIN:inner}}\n{{END:inner}}\n{{END:outer}}\n",
+            "[[BLOCK:outer]]\n[[BLOCK:inner]]\n[[/BLOCK:inner]]\n[[/BLOCK:outer]]\n",
         )
         with pytest.raises(SystemExit) as exc_info:
             main(["--file-id", "fid"], docs_client=FakeDocsClient(doc))
@@ -346,21 +346,21 @@ class TestNestedMarkers:
 
 class TestRegistryCrossCheck:
     def test_unregistered_marker_detected(self, tmp_path):
-        doc = _make_doc("{{BEGIN:intro}}\ntext\n{{END:intro}}\n")
+        doc = _make_doc("[[BLOCK:intro]]\ntext\n[[/BLOCK:intro]]\n")
         reg_path = _write_registry(tmp_path, ["body"])
         result = scan(FakeDocsClient(doc), "fid", registry_path=reg_path)
         assert "intro" in result["issues"]["unregistered_markers"]
         assert result["summary"]["issue_count"] > 0
 
     def test_registry_without_marker_detected(self, tmp_path):
-        doc = _make_doc("{{BEGIN:intro}}\ntext\n{{END:intro}}\n")
+        doc = _make_doc("[[BLOCK:intro]]\ntext\n[[/BLOCK:intro]]\n")
         reg_path = _write_registry(tmp_path, ["intro", "body"])
         result = scan(FakeDocsClient(doc), "fid", registry_path=reg_path)
         assert "body" in result["issues"]["registry_without_marker"]
         assert result["summary"]["issue_count"] > 0
 
     def test_exact_match_no_registry_issues(self, tmp_path):
-        doc = _make_doc("{{BEGIN:intro}}\ntext\n{{END:intro}}\n")
+        doc = _make_doc("[[BLOCK:intro]]\ntext\n[[/BLOCK:intro]]\n")
         reg_path = _write_registry(tmp_path, ["intro"])
         result = scan(FakeDocsClient(doc), "fid", registry_path=reg_path)
         assert result["issues"]["unregistered_markers"] == []
@@ -368,13 +368,13 @@ class TestRegistryCrossCheck:
 
     def test_no_registry_skips_cross_check(self):
         """When --registry omitted, unregistered/registry_without_marker stay empty (Architecture §4.2)."""
-        doc = _make_doc("{{BEGIN:foo}}\ntext\n{{END:foo}}\n")
+        doc = _make_doc("[[BLOCK:foo]]\ntext\n[[/BLOCK:foo]]\n")
         result = scan(FakeDocsClient(doc), "fid", registry_path=None)
         assert result["issues"]["unregistered_markers"] == []
         assert result["issues"]["registry_without_marker"] == []
 
     def test_missing_registry_file_exits_one(self):
-        doc = _make_doc("{{BEGIN:foo}}\ntext\n{{END:foo}}\n")
+        doc = _make_doc("[[BLOCK:foo]]\ntext\n[[/BLOCK:foo]]\n")
         with pytest.raises(SystemExit) as exc_info:
             main(
                 ["--file-id", "fid", "--registry", "/nonexistent/registry.json"],
@@ -439,7 +439,7 @@ class TestOutputSafety:
     def test_stdout_contains_no_doc_body_content(self, capsys):
         """Body text inside blocks must not leak onto stdout (SB-06)."""
         secret = "SENSITIVE_BODY_TEXT_XYZ_12345"
-        doc = _make_doc("{{BEGIN:blk}}\n" + secret + "\n{{END:blk}}\n")
+        doc = _make_doc("[[BLOCK:blk]]\n" + secret + "\n[[/BLOCK:blk]]\n")
         with pytest.raises(SystemExit):
             main(["--file-id", "fid"], docs_client=FakeDocsClient(doc))
         assert secret not in capsys.readouterr().out

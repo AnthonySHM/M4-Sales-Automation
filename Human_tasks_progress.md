@@ -4,7 +4,7 @@ This file tracks progress on all human-required tasks. At the start of any new s
 
 ---
 
-## Current Status: Issue #3 complete. Issue #7 in progress — markers in Google Doc, scan_template.py pending (needs gcloud auth). Still waiting on admin for Issue #2 service account key.
+## Current Status: Issue #3 complete. Issue #7 complete — scan_template.py passes (0 issues, 21 markers found). Auth uses GOOGLE_APPLICATION_CREDENTIALS=C:/Users/User/m4-user-credentials.json (custom OAuth client). Still waiting on admin for Issue #2 service account key.
 
 ---
 
@@ -15,7 +15,7 @@ This file tracks progress on all human-required tasks. At the start of any new s
 | #2 | P0 | Create Google Cloud project and service account | ❌ Blocked |
 | #3 | P0 | Provision Shared Drive and folder structure | ✅ Complete |
 | #4 | P0 | Confirm Claude Team plan seats include Claude Code | ✅ Closed |
-| #7 | P1 | Decompose pilot contract family into master template | ⏳ Waiting on #3 |
+| #7 | P1 | Decompose pilot contract family into master template | ✅ Complete |
 | #10 | P2 | Author assembly recipe for pilot family | ⏳ Waiting on #7, #9 |
 | #17 | P4 | Second teammate onboarding test | ⏳ Waiting on #16 |
 | #19 | P5 | Pilot measurement: manual vs automated time | ⏳ Waiting on #17 |
@@ -100,7 +100,7 @@ Only the developer needs Claude Pro. Teammates running jobs need only Python and
 | Create master Google Doc in masters/ folder | ✅ Done | Google Doc ID: `1KdmVNOjEGI3y-16Xx3XLU5SwnXgbuNfUyKSKoF35j9w` |
 | Add [[BLOCK:id]] / [[/BLOCK:id]] markers to doc | ✅ Done | Added via `scripts/build_master_template.py`, converted from Word to Google Doc |
 | Add {{PLACEHOLDER_KEY}} tokens to doc | ✅ Done | All 16 placeholders present in body (not headers/footers) |
-| Run scan_template.py — confirm 0 issues | ⏳ Not started | Needs gcloud auth setup first — `python .claude/skills/document-assembly/scripts/scan_template.py --file-id 1KdmVNOjEGI3y-16Xx3XLU5SwnXgbuNfUyKSKoF35j9w` |
+| Run scan_template.py — confirm 0 issues | ✅ Done | 21 markers found, 0 issues. Auth: `GOOGLE_APPLICATION_CREDENTIALS=C:/Users/User/m4-user-credentials.json` |
 | Update config/workspace.yaml pilot_family section | ✅ Done | `master_template_id` and `key` committed to main |
 
 ### Q-01 Resolution

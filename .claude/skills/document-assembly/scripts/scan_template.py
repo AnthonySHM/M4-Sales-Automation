@@ -25,7 +25,7 @@ import json
 import re
 import sys
 
-MARKER_RE = re.compile(r"\{\{(BEGIN|END):([a-z0-9_]{3,64})\}\}")
+MARKER_RE = re.compile(r"\[\[(/?)BLOCK:([a-z0-9_]{3,64})\]\]")
 
 
 class _Parser(argparse.ArgumentParser):
@@ -47,7 +47,7 @@ def _extract_markers(document):
             for match in MARKER_RE.finditer(text):
                 markers.append(
                     {
-                        "kind": match.group(1),
+                        "kind": "END" if match.group(1) == "/" else "BEGIN",
                         "block_id": match.group(2),
                         "start_index": elem.get("startIndex", 0),
                         "end_index": elem.get("endIndex", 0),
