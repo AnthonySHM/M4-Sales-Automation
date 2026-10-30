@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Jobs{% endblock %}
+{% block content %}
+{% if auto_refresh %}<meta http-equiv="refresh" content="10">{% endif %}
+<h1>Jobs</h1>
+{% if jobs %}
+<table>
+  <thead>
+    <tr>
+      <th>Job ID</th>
+      <th>Family</th>
+      <th>Status</th>
+      <th>Created</th>
+      <th>Drive</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for job in jobs %}
+    <tr>
+      <td><a href="/jobs/{{ job.job_id }}">{{ job.job_id }}</a></td>
+      <td>{{ job.get('family_key', '—') }}</td>
+      <td>{{ job.get('status', '—') }}</td>
+      <td>{{ job.get('created_at', '—') }}</td>
+      <td><a href="{{ job._drive_link }}">View</a></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p>No jobs submitted yet.</p>
+{% endif %}
+{% endblock %}

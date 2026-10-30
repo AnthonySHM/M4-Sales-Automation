@@ -3,6 +3,12 @@
 {% block content %}
 <h1>Job {{ job_id }}</h1>
 <p>Status: <strong>{{ status }}</strong></p>
+{% if family_key and family_key != '—' %}
+<p>Family: {{ family_key }}</p>
+{% endif %}
+{% if resolved_blocks_count is not none %}
+<p>Resolved blocks: {{ resolved_blocks_count }}</p>
+{% endif %}
 {% if drive_link %}
 <p><a href="{{ drive_link }}">View in Drive</a></p>
 {% endif %}
