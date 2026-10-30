@@ -1,0 +1,34 @@
+{
+  "request_id": "issue-16-golden-009",
+  "workspace_id": "workspace-pilot",
+  "family_key": "mss_sow",
+  "options": {
+    "tier": "elite",
+    "channel": "resell",
+    "addon_siem": "no",
+    "addon_firewall": "no",
+    "addon_storage": "no",
+    "addon_endpoint_patching": "no",
+    "addon_sentinelone": "no",
+    "include_slo": "no"
+  },
+  "placeholder_values": {
+    "CUSTOMER_NAME": "Test Customer Iota",
+    "CUSTOMER_LOGO": "logo-placeholder",
+    "CUSTOMER_CONTACT_NAME": "Olivia Scott",
+    "CUSTOMER_CONTACT_TITLE": "CISO",
+    "ACCOUNT_MANAGER_NAME": "Peter Adams",
+    "SOW_DATE": "2026-09-01",
+    "QUOTE_NUMBER": "M4RR-1005",
+    "REVISION_NUMBER": "Original",
+    "MSA_DATE": "2026-08-01",
+    "ORDER_START_DATE": "2026-10-01",
+    "HOT_STORAGE_MONTHS": "12",
+    "COLD_STORAGE_MONTHS": "24",
+    "POC_FEE_MONTHLY": "5000",
+    "TERM_FEE_MONTHLY": "8000",
+    "REMAINDER_FEE_MONTHLY": "8000",
+    "MIN_ENDPOINT_COUNT": "60"
+  },
+  "requested_by": "test@example.com"
+}

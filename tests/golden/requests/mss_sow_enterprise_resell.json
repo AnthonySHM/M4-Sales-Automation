@@ -1,0 +1,34 @@
+{
+  "request_id": "issue-16-golden-006",
+  "workspace_id": "workspace-pilot",
+  "family_key": "mss_sow",
+  "options": {
+    "tier": "enterprise",
+    "channel": "resell",
+    "addon_siem": "yes",
+    "addon_firewall": "no",
+    "addon_storage": "no",
+    "addon_endpoint_patching": "no",
+    "addon_sentinelone": "no",
+    "include_slo": "no"
+  },
+  "placeholder_values": {
+    "CUSTOMER_NAME": "Test Customer Zeta",
+    "CUSTOMER_LOGO": "logo-placeholder",
+    "CUSTOMER_CONTACT_NAME": "Ivan Cooper",
+    "CUSTOMER_CONTACT_TITLE": "VP Engineering",
+    "ACCOUNT_MANAGER_NAME": "Julia Ward",
+    "SOW_DATE": "2026-06-01",
+    "QUOTE_NUMBER": "M4RR-1003",
+    "REVISION_NUMBER": "Original",
+    "MSA_DATE": "2026-05-01",
+    "ORDER_START_DATE": "2026-07-01",
+    "HOT_STORAGE_MONTHS": "12",
+    "COLD_STORAGE_MONTHS": "24",
+    "POC_FEE_MONTHLY": "6000",
+    "TERM_FEE_MONTHLY": "11000",
+    "REMAINDER_FEE_MONTHLY": "11000",
+    "MIN_ENDPOINT_COUNT": "80"
+  },
+  "requested_by": "test@example.com"
+}
