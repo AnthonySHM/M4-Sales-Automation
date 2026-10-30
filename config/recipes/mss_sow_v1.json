@@ -155,6 +155,7 @@
     "POC_FEE_MONTHLY": "placeholder_values.poc_fee_monthly",
     "TERM_FEE_MONTHLY": "placeholder_values.term_fee_monthly",
     "REMAINDER_FEE_MONTHLY": "placeholder_values.remainder_fee_monthly",
-    "MIN_ENDPOINT_COUNT": "placeholder_values.min_endpoint_count"
+    "MIN_ENDPOINT_COUNT": "placeholder_values.min_endpoint_count",
+    "SERVICE_TIER_FULL_NAME": "placeholder_values.service_tier_full_name"
   }
 }

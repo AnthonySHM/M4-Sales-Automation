@@ -1,0 +1,3 @@
+{
+  "resolved_blocks": ["bench_cloud_identity", "bench_ndr", "fees_table_enterprise", "isensor", "service_desc_enterprise"]
+}

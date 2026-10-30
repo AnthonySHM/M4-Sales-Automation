@@ -1,5 +1,5 @@
 {
-  "request_id": "golden-mss-sow-001",
+  "request_id": "issue-16-golden-001",
   "workspace_id": "workspace-pilot",
   "family_key": "mss_sow",
   "options": {
@@ -28,7 +28,8 @@
     "POC_FEE_MONTHLY": "5000",
     "TERM_FEE_MONTHLY": "8000",
     "REMAINDER_FEE_MONTHLY": "8000",
-    "MIN_ENDPOINT_COUNT": "60"
+    "MIN_ENDPOINT_COUNT": "60",
+    "SERVICE_TIER_FULL_NAME": "Elite"
   },
   "requested_by": "test@example.com"
 }

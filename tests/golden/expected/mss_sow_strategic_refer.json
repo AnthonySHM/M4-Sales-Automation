@@ -1,0 +1,3 @@
+{
+  "resolved_blocks": ["addon_endpoint_patching", "addon_firewall_compliance", "bench_cloud_identity", "fees_table_strategic", "mdr_strategic", "service_desc_strategic", "slo_section"]
+}

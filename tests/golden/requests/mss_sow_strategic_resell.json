@@ -1,0 +1,35 @@
+{
+  "request_id": "issue-16-golden-008",
+  "workspace_id": "workspace-pilot",
+  "family_key": "mss_sow",
+  "options": {
+    "tier": "strategic",
+    "channel": "resell",
+    "addon_siem": "yes",
+    "addon_firewall": "no",
+    "addon_storage": "yes",
+    "addon_endpoint_patching": "no",
+    "addon_sentinelone": "yes",
+    "include_slo": "no"
+  },
+  "placeholder_values": {
+    "CUSTOMER_NAME": "Test Customer Theta",
+    "CUSTOMER_LOGO": "logo-placeholder",
+    "CUSTOMER_CONTACT_NAME": "Mia Turner",
+    "CUSTOMER_CONTACT_TITLE": "CIO",
+    "ACCOUNT_MANAGER_NAME": "Noah Clark",
+    "SOW_DATE": "2026-08-01",
+    "QUOTE_NUMBER": "M4RR-1004",
+    "REVISION_NUMBER": "Rev 1",
+    "MSA_DATE": "2026-07-01",
+    "ORDER_START_DATE": "2026-09-01",
+    "HOT_STORAGE_MONTHS": "18",
+    "COLD_STORAGE_MONTHS": "36",
+    "POC_FEE_MONTHLY": "8000",
+    "TERM_FEE_MONTHLY": "15000",
+    "REMAINDER_FEE_MONTHLY": "15000",
+    "MIN_ENDPOINT_COUNT": "200",
+    "SERVICE_TIER_FULL_NAME": "Strategic"
+  },
+  "requested_by": "test@example.com"
+}

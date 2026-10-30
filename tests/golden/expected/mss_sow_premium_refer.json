@@ -1,0 +1,3 @@
+{
+  "resolved_blocks": ["addon_firewall_compliance", "bench_ndr", "fees_table_premium", "isensor", "mdr_premium", "service_desc_premium", "slo_section"]
+}
