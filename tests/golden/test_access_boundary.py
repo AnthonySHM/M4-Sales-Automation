@@ -85,27 +85,35 @@ def test_denied_access_returns_403(_sandbox_creds):
     with pytest.raises(HttpError) as exc_info:
         _sandbox_creds.files().get(fileId=file_id, supportsAllDrives=False).execute()
 
-    assert exc_info.value.resp.status == 403, (
-        f"Expected 403 Forbidden but got {exc_info.value.resp.status}. "
+    # Google Drive returns 404 (not 403) for files the caller has no access to,
+    # deliberately hiding their existence. Both 403 and 404 confirm the service
+    # account cannot read the file (SB-01).
+    assert exc_info.value.resp.status in (403, 404), (
+        f"Expected 403 or 404 but got {exc_info.value.resp.status}. "
         "The service account may have broader access than intended (SB-01 violation)."
     )
 
 
 @pytest.mark.live
 def test_sandbox_drive_is_accessible(_sandbox_creds):
-    """Service account CAN access the designated sandbox Shared Drive. (G-12, SB-01)
+    """Service account CAN access the designated sandbox Drive folder. (G-12, SB-01)
+
+    Uses files().get() with supportsAllDrives=True because the pilot uses a
+    regular shared folder rather than a Google Shared Drive (AD-08).
 
     SETUP (human, Issue #3):
-      Set SANDBOX_SHARED_DRIVE_ID env var to the sandbox Shared Drive ID.
+      Set SANDBOX_SHARED_DRIVE_ID env var to the sandbox Drive folder ID.
     """
-    drive_id = os.environ.get("SANDBOX_SHARED_DRIVE_ID", "")
-    if not drive_id:
+    folder_id = os.environ.get("SANDBOX_SHARED_DRIVE_ID", "")
+    if not folder_id:
         pytest.skip(
             "SANDBOX_SHARED_DRIVE_ID not set. "
-            "Set it to the sandbox Shared Drive ID (Issue #3 required)."
+            "Set it to the sandbox Drive folder ID (Issue #3 required)."
         )
 
-    result = _sandbox_creds.drives().get(driveId=drive_id).execute()
-    assert result.get("id") == drive_id, (
-        f"Drive ID mismatch: expected {drive_id!r}, got {result.get('id')!r}"
+    result = _sandbox_creds.files().get(
+        fileId=folder_id, supportsAllDrives=True
+    ).execute()
+    assert result.get("id") == folder_id, (
+        f"Folder ID mismatch: expected {folder_id!r}, got {result.get('id')!r}"
     )

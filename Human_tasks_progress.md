@@ -4,9 +4,9 @@ This file tracks progress on all human-required tasks. At the start of any new s
 
 ---
 
-## Current Status (as of 2026-10-30)
+## Current Status (as of 2026-10-30, end of session)
 
-**Web app is fully working end-to-end on localhost.** Submit → assemble → awaiting_review → approve/reject all confirmed working. All P6–P10 automated issues (#34–#42, #49) are closed. The critical path to production is now cloud infrastructure (#33).
+**Issues #2 and #3 are now CLOSED.** Service account key obtained (`C:\Users\User\m4-service-account.json`), Drive folder shared with service account, `doctor.py` exits 0 with all 5 checks passing. The critical path to production is now Issue #33 (Cloud Run infrastructure).
 
 ---
 
@@ -14,15 +14,15 @@ This file tracks progress on all human-required tasks. At the start of any new s
 
 | Issue | Phase | Title | Status |
 |---|---|---|---|
-| #2 | P0 | Create Google Cloud project and service account | ❌ Blocked (org policy blocks key creation) |
-| #3 | P0 | Provision Shared Drive and folder structure | ✅ Done (all IDs in workspace.yaml; open issue blocking only service account AC) |
+| #2 | P0 | Create Google Cloud project and service account | ✅ Closed (2026-10-30) |
+| #3 | P0 | Provision Shared Drive and folder structure | ✅ Closed (2026-10-30) |
 | #4 | P0 | Confirm Claude Team plan seats include Claude Code | ✅ Closed |
 | #7 | P1 | Decompose pilot contract family into master template | ✅ Closed |
 | #9 | P1 | Block registry JSON for pilot family | ✅ Closed |
 | #10 | P2 | Author assembly recipe for pilot family | ✅ Closed |
 | #17 | P4 | Second teammate onboarding test | ⏳ Ready to start (web UI confirmed working) |
 | #19 | P5 | Pilot measurement: manual vs automated time | ⏳ Waiting on #17 |
-| #33 | P6 | Set up Google Cloud infrastructure (web UI) | ⏳ Waiting on #2 (service account) |
+| #33 | P6 | Set up Google Cloud infrastructure (web UI) | ⏳ Ready to start (unblocked — service account key ready) |
 | #35 | P6 | Dockerfile + Cloud Build pipeline | ⏳ Ready to implement (automated — just needs #33 done first to test deploy) |
 | #43 | P10 | Web UI pilot: ≥5 contracts via browser | ⏳ Waiting on #33 (Cloud Run deploy) |
 
@@ -30,34 +30,24 @@ This file tracks progress on all human-required tasks. At the start of any new s
 
 ## Issue #2 — Create Google Cloud project and service account
 
+**Status: ✅ CLOSED (2026-10-30)**
+
 | Step | Status | Detail |
 |---|---|---|
 | Open Google Cloud Console | ✅ Done | |
 | Identify existing project | ✅ Done | Project: **Sales Automation** · Project ID: `second-modem-500910-d1` |
 | Enable APIs | ✅ Done | Google Drive API, Google Docs API, Google Sheets API — all enabled |
-| Create service account | ✅ Done | Name: `m4-document-assembly` · Project: `second-modem-500910-d1` |
-| Install Google Cloud CLI | ✅ Done | Installed and configured |
-| Set up user auth (Option B) | ✅ Done | Custom OAuth client `m4-web` created, credentials at `C:/Users/User/m4-user-credentials.json` |
-| Download JSON key | ❌ Blocked | Org policy blocks service account key creation |
-| Distribute key to team | ⏳ Pending step above | |
-
-### Blocker
-Organisation policy blocks service account key creation. Email sent to Google Workspace admin.
-
-### Fallback
-Option B is in use: each user authenticates with their own Google identity. `C:/Users/User/m4-user-credentials.json` works for the local pilot.
-
-### What is needed to mark this complete
-- JSON key distributed to teammates, stored outside the repo
-- OR decision to use Option B permanently and close the issue
+| Create service account | ✅ Done | Name: `m4-document-assembly` · Email: `m4-document-assembly@second-modem-500910-d1.iam.gserviceaccount.com` |
+| Download JSON key | ✅ Done | Key saved at `C:\Users\User\m4-service-account.json` (outside repo) |
+| doctor.py passes | ✅ Done | All 5 checks pass with service account key |
 
 ---
 
 ## Issue #3 — Provision Shared Drive and folder structure
 
-**Status: Functionally complete. Open issue tracking only the service account AC.**
+**Status: ✅ CLOSED (2026-10-30)**
 
-All Drive folders created, all IDs committed to `config/workspace.yaml`. Ledger spreadsheet has `jobs` and `events` tabs (created 2026-10-30).
+All Drive folders created, all IDs committed to `config/workspace.yaml`. Ledger spreadsheet has `jobs` and `events` tabs. Service account granted Editor role on M4 Document Assembly folder. `workspace.yaml` `approved_revision_id` updated to `13` (commit `bfc36f6`).
 
 | Field | ID |
 |---|---|
@@ -102,7 +92,7 @@ All Drive folders created, all IDs committed to `config/workspace.yaml`. Ledger 
 
 ## Issue #33 — Set up Google Cloud infrastructure (web UI)
 
-**Waiting on:** Issue #2 (service account). Blocked on org policy.
+**Status: ⏳ READY TO START** — Unblocked as of 2026-10-30. Service account key is ready.
 
 | Step | Status | Detail |
 |---|---|---|
@@ -129,8 +119,8 @@ All Drive folders created, all IDs committed to `config/workspace.yaml`. Ledger 
 
 ## Local dev setup (for running the app on localhost)
 
-**Credentials file:** `C:\Users\User\m4-user-credentials.json` (authorized_user, has Drive/Sheets/Docs scopes)
-**Do NOT use** the gcloud ADC file — it lacks Drive/Sheets scopes.
+**Credentials file:** `C:\Users\User\m4-service-account.json` (service account key — use this)
+**Service account email:** `m4-document-assembly@second-modem-500910-d1.iam.gserviceaccount.com`
 
 **Start sequence (cmd):**
 ```
@@ -141,7 +131,7 @@ set SESSION_SECRET_KEY=dev-secret-key
 set GOOGLE_OAUTH_CLIENT_ID=<see Google Cloud Console — OAuth client m4-web>
 set GOOGLE_OAUTH_CLIENT_SECRET=<see Google Cloud Console — OAuth client m4-web>
 set ANTHROPIC_API_KEY=<your key>
-set GOOGLE_APPLICATION_CREDENTIALS=C:\Users\User\m4-user-credentials.json
+set GOOGLE_APPLICATION_CREDENTIALS=C:\Users\User\m4-service-account.json
 uvicorn "web.app:create_app" --factory --reload
 ```
 
@@ -156,12 +146,16 @@ uvicorn "web.app:create_app" --factory --reload
 
 ## Next action (resume here next session)
 
-**Option A (no admin needed):** Run Issue #17 — have a teammate use the browser app on localhost and log friction points.
+**Primary path — Issue #33 (Cloud Run infrastructure):**
+1. Create Cloud Run service in GCP console → record service name in `config/cloud.yaml`
+2. Create Secret Manager secrets: `GOOGLE_CREDENTIALS_JSON`, `SESSION_SECRET_KEY`, `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET`, `ANTHROPIC_API_KEY`
+3. Configure Google OAuth consent screen (internal users only)
+4. Fill in `config/cloud.yaml` with project ID, service name, secret names, Artifact Registry repo
 
-**Option B (requires admin):** Chase the service account key blocker on Issue #2, then proceed to Issue #33 (Cloud Run) → Issue #35 (Dockerfile + CI/CD) → Issue #43 (pilot).
+**After #33 is done:**
+- Issue #35 (Dockerfile + Cloud Build) — automated, Claude Code implements
+- Issue #43 (Web UI pilot) — ≥5 contracts via browser on Cloud Run
 
-**Automated work remaining:**
-- Issue #35 (Dockerfile + Cloud Build) — ready to implement once #33 cloud infra exists
-- Issue #17 (onboarding guide) — can be done now
+**Alternative (no infra needed):** Issue #17 — teammate onboarding test on localhost.
 
 **Everything on `main` is clean and pushed to GitHub.**

@@ -19,7 +19,7 @@ ledger:
 pilot_family:
   key: "mss_sow"
   master_template_id: "1KdmVNOjEGI3y-16Xx3XLU5SwnXgbuNfUyKSKoF35j9w"
-  approved_revision_id: "12"
+  approved_revision_id: "13"
   active_recipe_version: 1
 
 # R-06 Reviewers: list of email addresses authorised to approve/reject jobs.
