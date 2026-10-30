@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Sign in — M4 Sales Automation{% endblock %}
+
+{% block content %}
+<div style="max-width: 400px; margin: 80px auto; text-align: center;">
+  <h1 style="margin-bottom: 8px;">M4 Sales Automation</h1>
+  <p style="color: #666; margin-bottom: 32px;">Sign in to assemble contracts</p>
+  <a href="/auth/google"
+     style="display: inline-block; padding: 12px 24px; background: #4285F4;
+            color: white; border-radius: 4px; text-decoration: none;
+            font-weight: 500; font-size: 15px;">
+    Sign in with Google
+  </a>
+  {% if request.query_params.get('error') %}
+  <p style="color: #c62828; margin-top: 16px; font-size: 14px;">
+    Sign-in failed. Please try again.
+  </p>
+  {% endif %}
+</div>
+{% endblock %}
