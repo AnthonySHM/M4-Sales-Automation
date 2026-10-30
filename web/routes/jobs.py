@@ -22,9 +22,10 @@ import uuid
 
 import yaml
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from web.auth import SESSION_COOKIE, require_auth
+from web.middleware import _lookup_roles
 
 # ---------------------------------------------------------------------------
 # Scripts import — leading dot in directory name requires sys.path insertion
@@ -160,9 +161,47 @@ def _build_clients(workspace_cfg: dict):
 router = APIRouter()
 
 
+TERMINAL_STATUSES = {"completed", "failed", "approved", "rejected"}
+
+
+@router.get("/jobs")
+async def get_jobs_dashboard(request: Request, email: str = Depends(require_auth)):
+    """Render the job dashboard listing all submitted jobs."""
+    workspace_cfg = _get_workspace()
+    review_folder_id = workspace_cfg["folders"]["review"]
+
+    # Build sorted job list (newest first; None created_at sorts last)
+    jobs = sorted(
+        _JOB_STORE.values(),
+        key=lambda r: r.get("created_at") or "",
+        reverse=True,
+    )
+
+    # Build drive links
+    for job in jobs:
+        doc_id = job.get("output_document_id")
+        if doc_id:
+            job["_drive_link"] = f"https://docs.google.com/document/d/{doc_id}/edit"
+        else:
+            job["_drive_link"] = f"https://drive.google.com/drive/folders/{review_folder_id}"
+
+    # Auto-refresh: True if any non-terminal job exists
+    auto_refresh = any(j.get("status") not in TERMINAL_STATUSES for j in jobs)
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {"request": request, "jobs": jobs, "auto_refresh": auto_refresh},
+    )
+
+
 @router.get("/jobs/new")
 async def get_jobs_new(request: Request, email: str = Depends(require_auth)):
     """Render the job submission form."""
+    roles = _lookup_roles(email) or []
+    if "R-08" in roles:
+        return HTMLResponse("Forbidden", status_code=403)
+
     templates = request.app.state.templates
     workspace_cfg = _get_workspace()
     recipe = _get_recipe(workspace_cfg)
@@ -321,9 +360,12 @@ async def get_job_detail(
         request,
         "job_detail.html",
         {
-            "job_id": job_id,
+            "job_id": result.get("job_id", job_id),
             "status": result.get("status", "unknown"),
+            "family_key": result.get("family_key", "—"),
             "drive_link": drive_link,
             "error": result.get("error"),
+            "resolved_blocks": result.get("resolved_blocks"),
+            "resolved_blocks_count": len(result["resolved_blocks"]) if result.get("resolved_blocks") else None,
         },
     )
