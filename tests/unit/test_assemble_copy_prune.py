@@ -162,8 +162,8 @@ def _make_document(*block_ids: str) -> dict:
     content = []
     idx = 1
     for block_id in block_ids:
-        begin_text = "{{BEGIN:" + block_id + "}}"
-        end_text = "{{END:" + block_id + "}}"
+        begin_text = "[[BLOCK:" + block_id + "]]"
+        end_text = "[[/BLOCK:" + block_id + "]]"
         # BEGIN element
         content.append(
             {
@@ -561,10 +561,10 @@ class TestPruneBlocks:
 class TestGetExcludedRanges:
     def test_excludes_unrequested_block(self):
         markers = [
-            {"kind": "BEGIN", "block_id": "intro", "start_index": 1, "end_index": 20},
-            {"kind": "END", "block_id": "intro", "start_index": 100, "end_index": 120},
-            {"kind": "BEGIN", "block_id": "annex", "start_index": 200, "end_index": 220},
-            {"kind": "END", "block_id": "annex", "start_index": 300, "end_index": 320},
+            {"kind": "BLOCK", "block_id": "intro", "start_index": 1, "end_index": 20},
+            {"kind": "/BLOCK", "block_id": "intro", "start_index": 100, "end_index": 120},
+            {"kind": "BLOCK", "block_id": "annex", "start_index": 200, "end_index": 220},
+            {"kind": "/BLOCK", "block_id": "annex", "start_index": 300, "end_index": 320},
         ]
         ranges = _get_excluded_ranges(markers, ["intro"])
         assert (200, 320) in ranges
@@ -572,8 +572,8 @@ class TestGetExcludedRanges:
 
     def test_all_resolved_returns_empty(self):
         markers = [
-            {"kind": "BEGIN", "block_id": "intro", "start_index": 1, "end_index": 10},
-            {"kind": "END", "block_id": "intro", "start_index": 50, "end_index": 60},
+            {"kind": "BLOCK", "block_id": "intro", "start_index": 1, "end_index": 10},
+            {"kind": "/BLOCK", "block_id": "intro", "start_index": 50, "end_index": 60},
         ]
         ranges = _get_excluded_ranges(markers, ["intro"])
         assert ranges == []
