@@ -14,6 +14,8 @@ from fastapi.templating import Jinja2Templates
 
 import pathlib
 
+from web.routes.auth import router as _auth_router
+
 _PACKAGE_DIR = pathlib.Path(__file__).parent
 
 
@@ -50,6 +52,12 @@ def create_app() -> FastAPI:
 
     # Store templates on app.state so routes added in future tasks can access them
     app.state.templates = templates
+
+    # ------------------------------------------------------------------
+    # Routers
+    # ------------------------------------------------------------------
+
+    app.include_router(_auth_router)
 
     # ------------------------------------------------------------------
     # Routes
