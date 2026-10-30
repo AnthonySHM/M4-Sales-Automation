@@ -200,8 +200,12 @@ class RoleEnforcementMiddleware(BaseHTTPMiddleware):
         # 5. CSRF validation for all non-public POSTs
         # ------------------------------------------------------------------
         if method == "POST":
-            # Read form data — we must await body consumption
+            # Read body first so _CachedRequest caches it in _body, ensuring
+            # wrapped_receive replays bytes to downstream route handlers.
+            # Without this, form() consumes the stream without setting _body,
+            # and downstream gets an empty body (all form fields disappear).
             try:
+                await request.body()
                 form = await request.form()
                 submitted_csrf = form.get("_csrf", "")
             except Exception:

@@ -120,7 +120,7 @@ def _build_clients(workspace_cfg: dict):
             creds = Credentials(
                 token=creds_data.get("token"),
                 refresh_token=creds_data.get("refresh_token"),
-                token_uri=creds_data.get("token_uri"),
+                token_uri=creds_data.get("token_uri", "https://oauth2.googleapis.com/token"),
                 client_id=creds_data.get("client_id"),
                 client_secret=creds_data.get("client_secret"),
             )
@@ -145,10 +145,9 @@ def _build_clients(workspace_cfg: dict):
         from ledger import SheetsLedgerAdapter  # noqa: E402 (scripts on sys.path)
 
         ledger = SheetsLedgerAdapter(
-            service=sheets_client,
+            sheets_client=sheets_client,
             spreadsheet_id=workspace_cfg["ledger"]["spreadsheet_id"],
-            jobs_tab=workspace_cfg["ledger"]["jobs_tab"],
-            events_tab=workspace_cfg["ledger"]["events_tab"],
+            workspace_id=workspace_cfg["workspace_id"],
         )
         return drive_client, docs_client, ledger
     except Exception:
@@ -237,7 +236,7 @@ async def post_jobs(request: Request, email: str = Depends(require_auth)):
     placeholder_keys = list(recipe["placeholder_map"].keys())
 
     options = {k: form.get(k, "") for k in option_keys}
-    placeholder_values = {k.lower(): form.get(k.lower(), "") for k in placeholder_keys}
+    placeholder_values = {k: form.get(k.lower(), "") for k in placeholder_keys}
 
     request_dict = {
         "family_key": workspace_cfg["pilot_family"]["key"],

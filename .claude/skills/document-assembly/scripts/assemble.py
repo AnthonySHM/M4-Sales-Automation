@@ -219,10 +219,11 @@ def copy_master(drive_client, workspace: dict) -> dict:
     # Fetch current master metadata
     meta = (
         drive_client.files()
-        .get(fileId=master_id, fields="id,name,headRevisionId", supportsAllDrives=True)
+        .get(fileId=master_id, fields="id,name,headRevisionId,version", supportsAllDrives=True)
         .execute()
     )
-    live_rev: str = meta.get("headRevisionId", "")
+    # Google Docs return 'version' not 'headRevisionId'; fall back between them
+    live_rev: str = meta.get("headRevisionId") or meta.get("version", "")
 
     # Revision guard (G-08): skip check when approved_rev is empty
     if approved_rev and live_rev != approved_rev:
