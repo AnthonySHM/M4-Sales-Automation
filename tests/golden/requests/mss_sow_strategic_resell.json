@@ -28,7 +28,8 @@
     "POC_FEE_MONTHLY": "8000",
     "TERM_FEE_MONTHLY": "15000",
     "REMAINDER_FEE_MONTHLY": "15000",
-    "MIN_ENDPOINT_COUNT": "200"
+    "MIN_ENDPOINT_COUNT": "200",
+    "SERVICE_TIER_FULL_NAME": "Strategic"
   },
   "requested_by": "test@example.com"
 }
