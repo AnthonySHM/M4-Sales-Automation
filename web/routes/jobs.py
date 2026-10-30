@@ -298,6 +298,9 @@ async def post_jobs(request: Request, email: str = Depends(require_auth)):
     # Cache result for detail page
     job_id_final = result.get("job_id", job_id)
     _JOB_STORE[job_id_final] = result
+    # Assembly "completed" means the pipeline ran; workflow status is awaiting_review
+    if result.get("status") == "completed":
+        _JOB_STORE[job_id_final]["status"] = "awaiting_review"
 
     if result.get("status") == "failed":
         drive_link = (

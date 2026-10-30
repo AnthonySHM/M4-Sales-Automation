@@ -12,6 +12,9 @@
 {% if drive_link %}
 <p><a href="{{ drive_link }}">View in Drive</a></p>
 {% endif %}
+{% if status == 'awaiting_review' %}
+<p><a href="/jobs/{{ job_id }}/review">Approve / Reject</a></p>
+{% endif %}
 {% if error %}
 <div class="error-block">
   <p>Error: {{ error.message }}</p>
