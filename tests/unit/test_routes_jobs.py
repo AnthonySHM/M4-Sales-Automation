@@ -271,6 +271,60 @@ class TestPostJobsInvalid:
         assert response.status_code == 422
         assert "<form" in response.text
 
+    def test_post_jobs_missing_placeholder_422(self):
+        """POST /jobs with a required placeholder omitted → 422 and error in response."""
+        client, token = _authed_client()
+        csrf = _csrf_token_for(token)
+        # Build valid options but omit 'customer_name' placeholder
+        form = {
+            "_csrf": csrf,
+            "tier": "elite",
+            "channel": "resell",
+            "addon_siem": "no",
+            "addon_firewall": "no",
+            "addon_storage": "no",
+            "addon_endpoint_patching": "no",
+            "addon_sentinelone": "no",
+            "include_slo": "no",
+            # "customer_name": intentionally omitted
+            "customer_logo": "logo.png",
+            "customer_contact_name": "Jane Doe",
+            "customer_contact_title": "CTO",
+            "account_manager_name": "John Smith",
+            "sow_date": "2026-01-01",
+            "quote_number": "M4RR-1001",
+            "revision_number": "1",
+            "msa_date": "2025-06-01",
+            "order_start_date": "2026-02-01",
+            "hot_storage_months": "12",
+            "cold_storage_months": "6",
+            "poc_fee_monthly": "5000",
+            "term_fee_monthly": "10000",
+            "remainder_fee_monthly": "10000",
+            "min_endpoint_count": "60",
+            "service_tier_full_name": "Elite",
+        }
+
+        missing_error = {
+            "valid": False,
+            "errors": [
+                {
+                    "field": "placeholder_values.customer_name",
+                    "code": "missing_placeholder",
+                    "message": "customer_name is required",
+                }
+            ],
+        }
+
+        with (
+            patch("web.routes.jobs._build_clients", return_value=(None, None, None)),
+            patch("web.routes.jobs.validate_request", return_value=missing_error),
+        ):
+            response = client.post("/jobs", data=form, follow_redirects=False)
+
+        assert response.status_code == 422, response.text
+        assert "customer_name" in response.text or "missing" in response.text.lower()
+
 
 # ---------------------------------------------------------------------------
 # 4. POST /jobs where assemble times out returns 500
