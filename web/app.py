@@ -59,6 +59,9 @@ def create_app() -> FastAPI:
 
     app.include_router(_auth_router)
 
+    from web.routes.home import router as _home_router
+    app.include_router(_home_router)
+
     from web.routes.jobs import router as _jobs_router
     app.include_router(_jobs_router)
 
