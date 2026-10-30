@@ -60,6 +60,13 @@ def create_app() -> FastAPI:
     app.include_router(_auth_router)
 
     # ------------------------------------------------------------------
+    # Middleware
+    # ------------------------------------------------------------------
+
+    from web.middleware import RoleEnforcementMiddleware
+    app.add_middleware(RoleEnforcementMiddleware)
+
+    # ------------------------------------------------------------------
     # Routes
     # ------------------------------------------------------------------
 

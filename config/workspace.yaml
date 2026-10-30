@@ -25,3 +25,9 @@ pilot_family:
 # R-06 Reviewers: list of email addresses authorised to approve/reject jobs.
 # Leave empty ([]) to disable the identity check (single-user pilot setups).
 reviewers: []
+
+members: []
+# Format when populated:
+# members:
+#   - principal: "email@example.com"
+#     roles: ["R-05", "R-06"]
