@@ -57,6 +57,12 @@ def interpret_request(description: str, recipe: dict) -> dict:
             messages=[{"role": "user", "content": description}],
         )
         text = message.content[0].text.strip()
+        # Strip markdown code fences if Claude wraps the JSON
+        if text.startswith("```"):
+            text = text.split("```", 2)[1]
+            if text.startswith("json"):
+                text = text[4:]
+            text = text.strip()
         result = json.loads(text)
 
         # Sanitise: remove invalid option values (only keep values from allowed_values)
