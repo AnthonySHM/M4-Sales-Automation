@@ -13,6 +13,7 @@ jinja2==3.1.6
 python-multipart==0.0.32
 itsdangerous==2.2.0
 httpx==0.28.1          # Required by starlette.testclient.TestClient (fastapi.testclient)
+anthropic==0.40.0      # Claude API: natural language interpretation (AD-25, Issue #42)
 # Dev / CI tooling
 detect-secrets==1.5.0   # Secret scanning in pre-commit and CI (SB-02)
 pre-commit==4.7.0       # Hook runner (code standards, SB-02)
