@@ -27,7 +27,7 @@ import uuid
 from datetime import datetime, timezone
 
 
-MARKER_RE = re.compile(r"\{\{(BEGIN|END):([a-z0-9_]{3,64})\}\}")
+MARKER_RE = re.compile(r"\[\[(BLOCK|/BLOCK):([a-z0-9_]{3,64})\]\]")
 
 
 # ---------------------------------------------------------------------------
@@ -150,7 +150,7 @@ def resolve_blocks(request: dict, recipe: dict) -> list[str]:
 
 
 def _extract_all_markers(document: dict) -> list[dict]:
-    """Return ordered list of all marker dicts (BEGIN + END) with character positions."""
+    """Return ordered list of all marker dicts (BLOCK + /BLOCK) with character positions."""
     markers = []
     for element in document.get("body", {}).get("content", []):
         paragraph = element.get("paragraph", {})
@@ -173,16 +173,16 @@ def _get_excluded_ranges(
 ) -> list[tuple[int, int]]:
     """Return (start_index, end_index) ranges for blocks NOT in resolved_blocks.
 
-    Each range spans from the BEGIN marker's startIndex to the END marker's endIndex.
+    Each range spans from the [[BLOCK:id]] marker's startIndex to the [[/BLOCK:id]] marker's endIndex.
     """
     resolved_set = set(resolved_blocks)
     begin_map: dict[str, int] = {}
     ranges: list[tuple[int, int]] = []
 
     for m in markers:
-        if m["kind"] == "BEGIN":
+        if m["kind"] == "BLOCK":
             begin_map[m["block_id"]] = m["start_index"]
-        elif m["kind"] == "END" and m["block_id"] in begin_map:
+        elif m["kind"] == "/BLOCK" and m["block_id"] in begin_map:
             block_id = m["block_id"]
             start = begin_map.pop(block_id)
             if block_id not in resolved_set:
@@ -288,7 +288,7 @@ def prune_blocks(
     markers = _extract_all_markers(document)
 
     resolved_set = set(resolved_blocks)
-    doc_block_ids = {m["block_id"] for m in markers if m["kind"] == "BEGIN"}
+    doc_block_ids = {m["block_id"] for m in markers if m["kind"] == "BLOCK"}
     pruned = sorted(doc_block_ids - resolved_set)
 
     if not pruned:
@@ -379,10 +379,10 @@ def fill_placeholders(
 
 
 def strip_markers(docs_client, output_doc_id: str) -> list[str]:
-    """Remove any remaining {{BEGIN:*}} and {{END:*}} marker strings from the document.
+    """Remove any remaining [[BLOCK:*]] and [[/BLOCK:*]] marker strings from the document.
 
     Uses replaceAllText with an empty replacement string.
-    Returns list of unique marker patterns that were present (e.g. "{{BEGIN:foo}}").
+    Returns list of unique marker patterns that were present (e.g. "[[BLOCK:foo]]").
     """
     document = docs_client.documents().get(documentId=output_doc_id).execute()
     markers = _extract_all_markers(document)
@@ -393,7 +393,7 @@ def strip_markers(docs_client, output_doc_id: str) -> list[str]:
     # Collect unique marker strings
     unique_patterns: set[str] = set()
     for m in markers:
-        unique_patterns.add("{{" + m["kind"] + ":" + m["block_id"] + "}}")
+        unique_patterns.add("[[" + m["kind"] + ":" + m["block_id"] + "]]")
 
     requests = [
         {
@@ -421,7 +421,7 @@ def strip_markers(docs_client, output_doc_id: str) -> list[str]:
 def verify_output(docs_client, output_doc_id: str) -> None:
     """Re-read the document and assert zero leftover markers and placeholders.
 
-    Raises MarkerError if any {{BEGIN:*}} or {{END:*}} strings remain.
+    Raises MarkerError if any [[BLOCK:*]] or [[/BLOCK:*]] strings remain.
     Raises MissingPlaceholderError if any {{[A-Z0-9_]+}} strings remain.
     """
     document = docs_client.documents().get(documentId=output_doc_id).execute()
@@ -438,7 +438,7 @@ def verify_output(docs_client, output_doc_id: str) -> None:
     # Check for leftover markers
     leftover_markers = MARKER_RE.findall(full_text)
     if leftover_markers:
-        found = sorted({f"{{{{{k}:{v}}}}}" for k, v in leftover_markers})
+        found = sorted({f"[[{k}:{v}]]" for k, v in leftover_markers})
         raise MarkerError(f"Leftover markers after strip: {found}")
 
     # Check for leftover placeholders

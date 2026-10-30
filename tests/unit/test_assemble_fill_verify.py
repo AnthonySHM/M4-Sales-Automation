@@ -132,8 +132,8 @@ def _make_document_with_markers(*block_ids: str) -> dict:
     parts = []
     idx = 1
     for bid in block_ids:
-        begin = "{{BEGIN:" + bid + "}}"
-        end = "{{END:" + bid + "}}"
+        begin = "[[BLOCK:" + bid + "]]"
+        end = "[[/BLOCK:" + bid + "]]"
         parts.append(_make_paragraph(begin, idx)); idx += len(begin)
         body = f"Body of {bid}. "; parts.append(_make_paragraph(body, idx)); idx += len(body)
         parts.append(_make_paragraph(end, idx)); idx += len(end)
@@ -280,8 +280,8 @@ class TestStripMarkers:
         doc = _make_document_with_markers("intro")
         docs = FakeDocsClient(doc)
         result = strip_markers(docs, "doc_id")
-        assert "{{BEGIN:intro}}" in result
-        assert "{{END:intro}}" in result
+        assert "[[BLOCK:intro]]" in result
+        assert "[[/BLOCK:intro]]" in result
 
     def test_strips_multiple_pairs(self):
         doc = _make_document_with_markers("intro", "annex", "sla")
