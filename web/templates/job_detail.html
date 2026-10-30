@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}Job {{ job_id }}{% endblock %}
+{% block content %}
+<h1>Job {{ job_id }}</h1>
+<p>Status: <strong>{{ status }}</strong></p>
+{% if drive_link %}
+<p><a href="{{ drive_link }}">View in Drive</a></p>
+{% endif %}
+{% if error %}
+<div class="error-block">
+  <p>Error: {{ error.message }}</p>
+  {% if error.retryable %}<p>This error is retryable. Please try again.</p>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

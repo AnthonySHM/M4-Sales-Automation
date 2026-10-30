@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Submit Job{% endblock %}
+{% block content %}
+<h1>Submit Contract Request</h1>
+{% if errors %}
+<div class="errors">
+  {% for err in errors %}<p class="error">{{ err.field }}: {{ err.message }}</p>{% endfor %}
+</div>
+{% endif %}
+<form method="POST" action="/jobs">
+  <input type="hidden" name="_csrf" value="{{ csrf_token }}">
+  {% for opt in options %}
+  <div>
+    <label for="{{ opt.option_key }}">{{ opt.option_key }}</label>
+    <select name="{{ opt.option_key }}" id="{{ opt.option_key }}">
+      {% for val in opt.allowed_values %}
+      <option value="{{ val }}">{{ val }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% endfor %}
+  {% for key in placeholder_keys %}
+  <div>
+    <label for="{{ key.lower() }}">{{ key }}</label>
+    <input type="text" name="{{ key.lower() }}" id="{{ key.lower() }}" value="{{ form_values.get(key.lower(), '') if form_values else '' }}">
+  </div>
+  {% endfor %}
+  <button type="submit">Assemble</button>
+</form>
+{% endblock %}
