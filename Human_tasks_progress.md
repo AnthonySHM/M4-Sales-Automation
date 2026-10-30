@@ -6,7 +6,7 @@ This file tracks progress on all human-required tasks. At the start of any new s
 
 ## Current Status (as of 2026-10-30, end of session)
 
-**Issues #2 and #3 are now CLOSED.** Service account key obtained (`C:\Users\User\m4-service-account.json`), Drive folder shared with service account, `doctor.py` exits 0 with all 5 checks passing. The critical path to production is now Issue #33 (Cloud Run infrastructure).
+**Issues #2, #3, and #18 are now CLOSED.** Service account key obtained, Drive folder shared, `doctor.py` all 5 checks pass, and live access boundary tests pass. The critical path to production is now Issue #33 (Cloud Run infrastructure).
 
 ---
 
@@ -20,6 +20,7 @@ This file tracks progress on all human-required tasks. At the start of any new s
 | #7 | P1 | Decompose pilot contract family into master template | ✅ Closed |
 | #9 | P1 | Block registry JSON for pilot family | ✅ Closed |
 | #10 | P2 | Author assembly recipe for pilot family | ✅ Closed |
+| #18 | P3 | Access boundary verification | ✅ Closed (2026-10-30) |
 | #17 | P4 | Second teammate onboarding test | ⏳ Ready to start (web UI confirmed working) |
 | #19 | P5 | Pilot measurement: manual vs automated time | ⏳ Waiting on #17 |
 | #33 | P6 | Set up Google Cloud infrastructure (web UI) | ⏳ Ready to start (unblocked — service account key ready) |
@@ -57,6 +58,20 @@ All Drive folders created, all IDs committed to `config/workspace.yaml`. Ledger 
 | `folders.approved` | `1uH2N9g0Q2kzfwYFN6hJhPtQgUm0438v7` |
 | `folders.quarantine` | `1avRkalemhYLBU7tF1WtARSdNtPzyhnVP` |
 | `ledger.spreadsheet_id` | `1CjSkWyKtvWM-OW_9X1vubbC857P_SDvLUFheeP2XcwA` |
+
+---
+
+## Issue #18 — Access boundary verification
+
+**Status: ✅ CLOSED (2026-10-30)**
+
+| Step | Status | Detail |
+|---|---|---|
+| Live denied-access test | ✅ Pass | Service account gets 404 (Google hides inaccessible files) — accepted alongside 403 |
+| Live accessible-drive test | ✅ Pass | Service account can read M4 Document Assembly folder |
+| Secret scan, gitignore, pre-commit | ✅ Pass | All previously verified |
+
+**Note:** `tests/golden/test_access_boundary.py` updated to use `files().get()` (pilot uses regular folder, not Shared Drive per AD-08). Run with: `pytest tests/golden/test_access_boundary.py --run-live` + env vars `SANDBOX_SHARED_DRIVE_ID=1TOI0xeXN__be3Mb7jB2QCsPWur_9nQWG` and `UNGRANTED_FILE_ID=<any file not shared with service account>`.
 
 ---
 
