@@ -1,7 +1,7 @@
 {
   "family_key": "mss_sow",
   "version": 1,
-  "status": "draft",
+  "status": "published",
   "options": [
     {
       "option_key": "tier",
@@ -150,7 +150,6 @@
     "REVISION_NUMBER": "placeholder_values.revision_number",
     "MSA_DATE": "placeholder_values.msa_date",
     "ORDER_START_DATE": "placeholder_values.order_start_date",
-    "SERVICE_TIER_FULL_NAME": "placeholder_values.service_tier_full_name",
     "HOT_STORAGE_MONTHS": "placeholder_values.hot_storage_months",
     "COLD_STORAGE_MONTHS": "placeholder_values.cold_storage_months",
     "POC_FEE_MONTHLY": "placeholder_values.poc_fee_monthly",

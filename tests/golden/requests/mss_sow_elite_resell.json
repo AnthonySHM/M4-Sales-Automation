@@ -1,0 +1,34 @@
+{
+  "request_id": "golden-mss-sow-001",
+  "workspace_id": "workspace-pilot",
+  "family_key": "mss_sow",
+  "options": {
+    "tier": "elite",
+    "channel": "resell",
+    "addon_siem": "yes",
+    "addon_firewall": "yes",
+    "addon_storage": "yes",
+    "addon_endpoint_patching": "yes",
+    "addon_sentinelone": "yes",
+    "include_slo": "yes"
+  },
+  "placeholder_values": {
+    "CUSTOMER_NAME": "Test Customer Alpha",
+    "CUSTOMER_LOGO": "logo-placeholder",
+    "CUSTOMER_CONTACT_NAME": "Jane Smith",
+    "CUSTOMER_CONTACT_TITLE": "CISO",
+    "ACCOUNT_MANAGER_NAME": "John Doe",
+    "SOW_DATE": "2026-01-15",
+    "QUOTE_NUMBER": "M4RR-1001",
+    "REVISION_NUMBER": "Original",
+    "MSA_DATE": "2025-12-01",
+    "ORDER_START_DATE": "2026-02-01",
+    "HOT_STORAGE_MONTHS": "12",
+    "COLD_STORAGE_MONTHS": "24",
+    "POC_FEE_MONTHLY": "5000",
+    "TERM_FEE_MONTHLY": "8000",
+    "REMAINDER_FEE_MONTHLY": "8000",
+    "MIN_ENDPOINT_COUNT": "60"
+  },
+  "requested_by": "test@example.com"
+}
