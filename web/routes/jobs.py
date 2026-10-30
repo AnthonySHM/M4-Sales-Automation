@@ -22,9 +22,10 @@ import uuid
 
 import yaml
 from fastapi import APIRouter, Depends, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 from web.auth import SESSION_COOKIE, require_auth
+from web.claude_interpreter import interpret_request
 from web.middleware import _lookup_roles
 
 # ---------------------------------------------------------------------------
@@ -317,6 +318,29 @@ async def post_jobs(request: Request, email: str = Depends(require_auth)):
         )
 
     return RedirectResponse(url=f"/jobs/{job_id_final}", status_code=303)
+
+
+@router.get("/jobs/interpret")
+async def get_jobs_interpret(
+    request: Request,
+    description: str = "",
+    email: str = Depends(require_auth),
+):
+    """Interpret a plain-text description into structured form fields via Claude API.
+
+    Returns JSON: {"options": {...}, "placeholder_values": {...}}
+    On any error returns empty dicts (graceful degradation — TL-10).
+    GET with query param avoids CSRF middleware conflict (no form body).
+    """
+    if not description.strip():
+        return JSONResponse({"options": {}, "placeholder_values": {}})
+    workspace_cfg = _get_workspace()
+    recipe = _get_recipe(workspace_cfg)
+    result = interpret_request(description.strip(), recipe)
+    return JSONResponse({
+        "options": result.get("options", {}),
+        "placeholder_values": result.get("placeholder_values", {}),
+    })
 
 
 @router.get("/jobs/{job_id}")

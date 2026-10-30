@@ -2,11 +2,22 @@
 {% block title %}Submit Job{% endblock %}
 {% block content %}
 <h1>Submit Contract Request</h1>
+<style>
+.needs-attention { border: 2px solid orange; background: #fff8e1; }
+</style>
 {% if errors %}
 <div class="errors">
   {% for err in errors %}<p class="error">{{ err.field }}: {{ err.message }}</p>{% endfor %}
 </div>
 {% endif %}
+<div id="ai-section" style="margin-bottom: 1.5em; padding: 1em; border: 1px solid #ddd; border-radius: 4px;">
+  <h3>AI Pre-fill (optional)</h3>
+  <label for="ai-description">Describe your contract:</label><br>
+  <textarea id="ai-description" rows="4" cols="60"
+    placeholder="e.g. Elite tier Resell SOW for Acme Corp, starting February 2027, account manager John Smith..."></textarea><br>
+  <button type="button" id="prefill-btn" style="margin-top: 0.5em;">Pre-fill with AI</button>
+  <span id="prefill-status" style="margin-left: 1em; color: #666;"></span>
+</div>
 <form method="POST" action="/jobs">
   <input type="hidden" name="_csrf" value="{{ csrf_token }}">
   {% for opt in options %}
@@ -27,4 +38,57 @@
   {% endfor %}
   <button type="submit">Assemble</button>
 </form>
+<script>
+document.getElementById('prefill-btn').addEventListener('click', async function() {
+  const desc = document.getElementById('ai-description').value.trim();
+  if (!desc) {
+    document.getElementById('prefill-status').textContent = 'Please enter a description first.';
+    return;
+  }
+  document.getElementById('prefill-status').textContent = 'Thinking\u2026';
+  document.getElementById('prefill-btn').disabled = true;
+  try {
+    const resp = await fetch('/jobs/interpret?description=' + encodeURIComponent(desc));
+    if (!resp.ok) throw new Error('API error');
+    const data = await resp.json();
+
+    // Populate option selects
+    const opts = data.options || {};
+    for (const [key, val] of Object.entries(opts)) {
+      const sel = document.querySelector('select[name="' + key + '"]');
+      if (sel && val) {
+        sel.value = val;
+        sel.classList.remove('needs-attention');
+      } else if (sel) {
+        sel.classList.add('needs-attention');
+      }
+    }
+
+    // Populate placeholder inputs
+    const pv = data.placeholder_values || {};
+    // Also highlight any input not filled by Claude
+    document.querySelectorAll('input[type="text"]').forEach(function(inp) {
+      const key = inp.name;
+      if (key in pv) {
+        inp.value = pv[key] || '';
+        inp.classList.toggle('needs-attention', !pv[key]);
+      } else {
+        inp.classList.add('needs-attention');
+      }
+    });
+
+    const emptyCount = document.querySelectorAll('.needs-attention').length;
+    if (emptyCount > 0) {
+      document.getElementById('prefill-status').textContent =
+        'Pre-filled! ' + emptyCount + ' field(s) need your attention (highlighted).';
+    } else {
+      document.getElementById('prefill-status').textContent = 'All fields pre-filled. Review and click Assemble.';
+    }
+  } catch (e) {
+    document.getElementById('prefill-status').textContent = 'AI pre-fill unavailable \u2014 fill manually.';
+  } finally {
+    document.getElementById('prefill-btn').disabled = false;
+  }
+});
+</script>
 {% endblock %}
