@@ -62,6 +62,9 @@ def create_app() -> FastAPI:
     from web.routes.jobs import router as _jobs_router
     app.include_router(_jobs_router)
 
+    from web.routes.review import router as _review_router
+    app.include_router(_review_router)
+
     # ------------------------------------------------------------------
     # Middleware
     # ------------------------------------------------------------------
